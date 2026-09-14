@@ -7,4 +7,5 @@
 - 补充个人维护规则和交接结构, 将 `custom` 纳入官方 CI
 - 增加不推送镜像的 Docker build CI; 自动 upstream 同步 PR 因维护复杂度暂不实现
 - 本地 lint、format、typecheck、OpenAPI/client 漂移检查及前端构建通过; Python 测试仅因 Windows 符号链接权限出现 4 项环境失败
+- 验证基线 `a2ca0dbd2c4043eb23a4a2f6d913b524022f10a8` 的 GitHub Actions CI #1 全部通过, 包含 Ubuntu、Windows 与 Docker build
 - 未修改业务功能、生产配置或 NAS

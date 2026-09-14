@@ -6,7 +6,7 @@
 
 - upstream: `sqzw-x/amane` `v0.14.0`, `upstream/main` 为 `5de9f9ae463169942f1ed45314989a2033ee835c`
 - main: `5de9f9ae463169942f1ed45314989a2033ee835c`, 与 `upstream/main` 及 `origin/main` 一致
-- custom: 本文件所在提交; 精确值使用 `git rev-parse custom` 获取
+- custom: 本文件所在提交; 精确值使用 `git rev-parse custom` 获取; CI 验证基线为 `a2ca0dbd2c4043eb23a4a2f6d913b524022f10a8`
 
 ## 已验证功能
 
@@ -18,17 +18,16 @@
 - PASS: CI 增加仅构建、不登录、不推送的 Docker 验证
 - PASS: Ruff lint/format、Pyright、ty、OpenAPI/client 漂移检查、前端 check 与前端 production build
 - PARTIAL: Python 测试为 2495 passed、42 skipped、4 failed; 失败均为 Windows `WinError 1314` 符号链接权限不足, 未进入被测业务逻辑
+- PASS: GitHub Actions CI #1 在验证基线提交通过: Ubuntu `just ci`、Windows `just ci-windows`、Docker build
 
 ## 未验证功能
 
 - UNVERIFIED: 私有 `amane-testdata` 无访问权限, crawler fixture 测试按官方机制跳过
-- UNVERIFIED: 本机缺少 Docker 命令, Docker 构建结果待 CI 验证
-- UNVERIFIED: 当前提交推送后的 GitHub Actions 结果
 - UNVERIFIED: NAS 生产部署; 本次任务未连接或修改 NAS
 
 ## 当前阻塞项
 
-- Windows 当前进程无创建符号链接权限; 本机缺少 Docker; 私有测试 fixture 不可访问
+- 无仓库基础维护阻塞项. 本机 Windows 符号链接权限与私有 fixture 仅限制本地覆盖范围, 对应标准 CI 与 Docker build 已通过
 
 ## 与 upstream 的差异
 
