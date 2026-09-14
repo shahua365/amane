@@ -85,6 +85,17 @@ formatter/linter 不通过时优先使用 `just fix` 自动修复, 不要手动�
 
 ## 开发规范
 
+### 个人 Fork 维护
+
+- `main` 仅通过 fast-forward 同步 `upstream/main`, 不承载个人功能; `custom` 承载个人增强与交接记录
+- 修改前阅读相关 `docs/dev/` 索引、源码、测试与现有实现, 优先采用小范围、低侵入修改, 避免无必要的重构
+- 每项独立功能使用独立提交, 不混入无关格式化或清理, 降低与 upstream 的冲突
+- 禁止通过删除、跳过、放宽或改写有效测试规避 CI 失败
+- 数据库结构变更必须使用 Alembic 工具生成迁移并验证旧版本升级路径; 迁移规则见 [docs/dev/database.md](docs/dev/database.md)
+- Cookie、Token、API Key、密码、私有地址与运行数据禁止提交; 提交与推送前检查暂存内容和待推送历史
+- upstream 更新先检查提交、依赖、迁移、配置、API 与构建流程中的破坏性变更, 再将更新后的 `main` 合并到 `custom`; 已发布的 `custom` 不执行常规 rebase
+- upstream 合并完成后执行仓库现有测试、lint、typecheck、前后端构建与 Docker 构建, 并更新 `handoff/LATEST.md` 与重要维护记录
+
 ### 通用
 
 - 及时提交. 开发过程保持细粒度提交, 每个逻辑变更独立提交, 避免积压为单个巨大提交
