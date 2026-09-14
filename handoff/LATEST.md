@@ -47,4 +47,4 @@
 
 ## 下一步
 
-检查首次 `custom` 推送触发的 GitHub Actions, 以 CI 结果补齐本机无法完成的完整门禁与 Docker 构建证据.
+在 upstream 出现下一次提交后执行首次同步演练, 按既定流程审查变更、fast-forward `main`、合并到 `custom` 并完成全部门禁.
