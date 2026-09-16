@@ -5,7 +5,9 @@ import os
 import random
 import time
 from contextlib import contextmanager
+from email.utils import parsedate_to_datetime
 from typing import TYPE_CHECKING, Any
+from urllib.parse import urljoin, urlsplit
 
 import aiofiles
 import httpx2 as httpx
@@ -47,7 +49,7 @@ _IMPERSONATE_OPTIONS: tuple[BrowserTypeLiteral, ...] = (
     "firefox135",
 )
 
-_RETRYABLE_STATUS_CODES = frozenset({408, 429, 503, 504})
+_RETRYABLE_STATUS_CODES = frozenset({408, 429, 500, 502, 503, 504})
 
 
 class RateLimiters:
@@ -86,7 +88,9 @@ class RateLimiters:
             for url in base_urls:
                 host = httpx.URL(url).host
                 if host:
-                    instance._limiters[host] = _make_limiter(cfg.rate_limit)
+                    existing = instance._limiters.get(host)
+                    rate = min(cfg.rate_limit, 1 / existing.time_period) if existing else cfg.rate_limit
+                    instance._limiters[host] = _make_limiter(rate)
 
         # Plugin descriptors can provide a source-level default without being
         # forced into the core SiteConfig model.
@@ -122,6 +126,17 @@ def _make_limiter(rate: float) -> AsyncLimiter:
     return AsyncLimiter(1, 1 / rate)
 
 
+def _retry_after(value: str | None) -> float:
+    if not value:
+        return 0.0
+    if value.strip().isdigit():
+        return float(value)
+    try:
+        return max(0.0, parsedate_to_datetime(value).timestamp() - time.time())
+    except ValueError, TypeError, OverflowError:
+        return 0.0
+
+
 def _failure_body(resp: Response | None) -> bytes | None:
     if resp is None:
         return None
@@ -145,11 +160,24 @@ class WebClient:
         max_retries: int = 3,
         max_clients: int = 50,
         limiters: RateLimiters,
+        retry_backoff: float = 2.0,
+        retry_max_wait: float = 60.0,
+        request_jitter: float = 0.3,
+        host_concurrency: int = 1,
+        negative_cache_ttl: float = 43200.0,
     ):
         self._proxy = proxy
         self._timeout = timeout
         self._max_retries = max_retries
         self._limiters = limiters
+        self._retry_backoff = retry_backoff
+        self._retry_max_wait = retry_max_wait
+        self._request_jitter = request_jitter
+        self._host_concurrency = host_concurrency
+        self._host_slots: dict[str, asyncio.Semaphore] = {}
+        self._host_cooldown: dict[str, float] = {}
+        self._not_found: dict[str, float] = {}
+        self._negative_cache_ttl = negative_cache_ttl
         self._session = AsyncSession(
             max_clients=max_clients,
             verify=False,
@@ -173,27 +201,37 @@ class WebClient:
         ok_statuses: frozenset[int] | None = None,
     ) -> Response:
         """``ok_statuses`` 额外视为成功 (例如 RSS 304), 不重试、不当失败. 重试用尽后抛 ``RequestError``."""
-        host = httpx.URL(url).host
-        await self._limiters.get(host).acquire()
+        host = httpx.URL(url).host.rstrip(".")
+        if host == "fc2ppvdb.com" or host.endswith(".fc2ppvdb.com"):
+            raise RequestError(url, RequestFailure(kind=FailureKind.HTTP_STATUS, status=410, message="retired source"))
+        if method == "GET" and self._not_found.get(url, 0) > time.monotonic():
+            raise RequestError(
+                url, RequestFailure(kind=FailureKind.HTTP_STATUS, status=404, message="cached not found")
+            )
 
         t0 = time.monotonic()
         failure: RequestFailure | None = None
         last_resp: Response | None = None
-        for attempt in range(self._max_retries):
+        attempts = max(1, self._max_retries)
+        for attempt in range(attempts):
             should_retry = False
             try:
-                resp: Response = await self._session.request(
+                resp = await self._request_hops(
                     method,
                     url,
                     headers=headers,
                     cookies=cookies,
                     data=data,
                     json=json,
-                    proxy=self._proxy if use_proxy else None,
-                    timeout=timeout or self._timeout,
+                    use_proxy=use_proxy,
+                    timeout=timeout,
                     allow_redirects=allow_redirects,
                 )
                 last_resp = resp
+                if method == "GET" and resp.status_code == 404 and self._negative_cache_ttl:
+                    now = time.monotonic()
+                    self._not_found = {key: expiry for key, expiry in self._not_found.items() if expiry > now}
+                    self._not_found[url] = now + self._negative_cache_ttl
 
                 extra_ok = ok_statuses or frozenset()
                 if (
@@ -201,7 +239,7 @@ class WebClient:
                     or resp.status_code in extra_ok
                     or (resp.status_code in (301, 302, 307, 308) and resp.headers.get("Location"))
                 ):
-                    self._record_exchange(method, url, resp=resp, error=None, t0=t0)
+                    self._record_exchange(method, resp.url or url, resp=resp, error=None, t0=t0)
                     return resp
 
                 failure = RequestFailure(
@@ -212,6 +250,8 @@ class WebClient:
                 )
                 should_retry = resp.status_code in _RETRYABLE_STATUS_CODES
 
+            except RequestError:
+                raise
             except CurlError as e:
                 failure = RequestFailure(kind=FailureKind.CURL, message=f"curl error: {e}")
                 should_retry = True
@@ -227,8 +267,11 @@ class WebClient:
             if not should_retry:
                 break
 
-            if attempt < self._max_retries - 1:
-                wait = attempt * 3 + 2 + random.uniform(-1, 1)
+            if attempt < attempts - 1:
+                retry_after = _retry_after(last_resp.headers.get("Retry-After")) if last_resp else 0.0
+                if retry_after > self._retry_max_wait:
+                    break
+                wait = max(retry_after, min(self._retry_max_wait, self._retry_backoff * 2**attempt))
                 logger.warning(
                     "request retry",
                     method=method,
@@ -246,13 +289,76 @@ class WebClient:
             method=method,
             url=url,
             error=failure.message if failure else None,
-            attempts=self._max_retries,
+            attempts=attempt + 1,
             duration_s=round(time.monotonic() - t0, 2),
         )
         self._record_exchange(
-            method, url, resp=last_resp, error=failure.message if failure else None, t0=t0, attempts=self._max_retries
+            method, url, resp=last_resp, error=failure.message if failure else None, t0=t0, attempts=attempt + 1
         )
         raise RequestError(url, failure)
+
+    async def _request_hops(
+        self,
+        method: HttpMethod,
+        url: str,
+        *,
+        headers: dict[str, str] | None,
+        cookies: dict[str, str] | None,
+        data: Any,
+        json: Any,
+        use_proxy: bool,
+        timeout: float | None,
+        allow_redirects: bool,
+    ) -> Response:
+        for _ in range(21):
+            host = (urlsplit(url).hostname or "").rstrip(".")
+            if host == "fc2ppvdb.com" or host.endswith(".fc2ppvdb.com"):
+                raise RequestError(
+                    url, RequestFailure(kind=FailureKind.HTTP_STATUS, status=410, message="retired source")
+                )
+            slots = self._host_slots.setdefault(host, asyncio.Semaphore(self._host_concurrency))
+            async with slots:
+                remaining = self._host_cooldown.get(host, 0) - time.monotonic()
+                if remaining > 0:
+                    raise RequestError(
+                        url, RequestFailure(kind=FailureKind.HTTP_STATUS, status=429, message="host cooling down")
+                    )
+                limiter = self._limiters.get(host)
+                # 抖动围绕额外等待变化, 不突破最短请求间隔.
+                if self._request_jitter:
+                    await asyncio.sleep(random.uniform(0, 2 * self._request_jitter) * limiter.time_period)
+                await limiter.acquire()
+                resp = await self._session.request(
+                    method,
+                    url,
+                    headers=headers,
+                    cookies=cookies,
+                    data=data,
+                    json=json,
+                    proxy=self._proxy if use_proxy else None,
+                    timeout=timeout or self._timeout,
+                    allow_redirects=False,
+                )
+                if resp.status_code == 429:
+                    delay = max(_retry_after(resp.headers.get("Retry-After")), self._retry_backoff)
+                    self._host_cooldown[host] = time.monotonic() + delay
+            location = resp.headers.get("Location")
+            if not allow_redirects or resp.status_code not in (301, 302, 303, 307, 308) or not location:
+                return resp
+            target = urljoin(url, location)
+            target_host = urlsplit(target).hostname or ""
+            self._limiters.get(target_host, rate=1 / self._limiters.get(host).time_period)
+            if urlsplit(target).hostname != host:
+                cookies = None
+                headers = {
+                    key: value
+                    for key, value in (headers or {}).items()
+                    if key.lower() not in {"cookie", "authorization", "proxy-authorization"}
+                }
+            if resp.status_code == 303 or (resp.status_code in (301, 302) and method == "POST"):
+                method, data, json = "GET", None, None
+            url = target
+        raise RequestError(url, RequestFailure(kind=FailureKind.UNEXPECTED, message="redirect limit exceeded"))
 
     def _record_exchange(
         self,

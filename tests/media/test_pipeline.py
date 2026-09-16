@@ -41,6 +41,27 @@ class FakeClient:
 
 
 @pytest.mark.asyncio
+async def test_scrape_cache_survives_remote_image_failure(resource_store: ResourceStore, tmp_path: Path) -> None:
+    url = "https://images.example/cached.jpg"
+    dead = "https://images.example/deleted.jpg"
+    fake = FakeClient({url: (600, 900)}, fail={dead})
+    client = cast("WebClient", fake)
+    config = HotSettings()
+    config.scraping.crop_poster = False
+    await materialize_images(
+        [dead, url], [url], [], resource_store, client, config, tmp_path, extrafanart_urls={"fc2": [url, url]}
+    )
+    assert await resource_store.resolve(url) is not None
+    assert await resource_store.resolve(dead) is None
+    count = len(fake.downloaded)
+    fake.fail.add(url)
+    # 整理使用相同 ResourceStore, 不访问已经失效的上游 URL.
+    result = await resource_store.acquire_first([dead, url], client)
+    assert result.success and result.used_url == url
+    assert len(fake.downloaded) == count
+
+
+@pytest.mark.asyncio
 async def test_poster_cropped_when_candidate_small(resource_store: ResourceStore, tmp_path: Path):
     """poster 候选偏矮 → 从 thumb 按配置 poster_ratio 靠右裁, 不用候选长宽比."""
     client = FakeClient(

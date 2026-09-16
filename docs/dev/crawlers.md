@@ -33,6 +33,10 @@ CrawlerFactory (缓存实例)
 
 `crawlers/base.py::Crawler` 是 Template Method: 公开 `fetch()` (负责日志; HTTP / 拦截失败冒泡 `SourceError`), 子类实现 `_search` (番号 → URL) 与 `_scrape` (URL → `MediaMetadata`); 特殊源可直接 override `fetch()`. `profile()` 类方法给出内置来源 ID / `base_url` / 能力与性别 / 可选 cookies 与限速 URL; `__init__` 在 `profile()` 之后自动合并配置, 子类不得再次调用. 外部来源不要求继承 `Crawler`, 契约见 [plugins.md](plugins.md).
 
+## FC2 契约
+
+`crawlers/models.py::SearchQuery` 规范化 FC2 查询; 裸数字必须显式声明 FC2, 既有数据库身份不批量改写. `config/manager.py::ScrapingConfig._migrate_fc2ppvdb` 迁移旧来源 ID; `net/http.py::WebClient` 拒绝旧 host 及重定向目标. FC2 聚合补空与标签并集合并见 `aggregate/engine.py::_enrich_fc2`, 仍遵守字段优先级与黑名单. 官方原始标题保留于来源 raw, 不新增数据库字段.
+
 ## 番号入参
 
 `SearchQuery.number` 就是 `ScrapePayload.number`; Handler 不解析番号. 来源路径不同则字符串形态不同, 爬虫不能假设「一定已经带短横线、一定是大写」:

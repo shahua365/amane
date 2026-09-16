@@ -6,6 +6,7 @@ from copy import copy
 from enum import StrEnum
 from pathlib import Path
 from typing import Annotated, Any, Literal
+from urllib.parse import urlsplit
 
 import tomli_w
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -68,9 +69,11 @@ _DEFAULT_CONTENT_ROUTES: dict[ContentType, list[SiteName]] = {
         SiteName.FREEJAVBT,
     ],
     ContentType.FC2: [
-        SiteName.JAVDB,
-        SiteName.FC2PPVDB,
         SiteName.FC2,
+        SiteName.JAVARCHIVE,
+        SiteName.JAVDB,
+        SiteName.FC2CMADB,
+        SiteName.FD2PPV,
         SiteName.FREEJAVBT,
     ],
     ContentType.CHINESE: [
@@ -96,6 +99,22 @@ _DEFAULT_CONTENT_ROUTES: dict[ContentType, list[SiteName]] = {
         SiteName.JAVDB,
     ],
 }
+
+
+def _site_default_rate(site: str) -> float:
+    if site in {"fc2", "javarchive"}:
+        return 0.3
+    if site == "fc2cmadb":
+        return 0.02
+    if site in {"fd2ppv", "fc2club", "javdb"}:
+        return 0.05
+    if site in {"javlibrary", "avsox"}:
+        return 0.1
+    if site in {"airav", "freejavbt", "iqqtv", "javbus", "jav321"}:
+        return 0.2
+    if site in {"gfriends", "wikipedia"}:
+        return 1.0
+    return 0.5
 
 
 class R18Config(BaseModel):
@@ -235,7 +254,7 @@ class SiteConfig(BaseModel):
     )
     """OfficialCrawler 的番号前缀→域名路由."""
 
-    rate_limit: float | None = Field(default=2, ge=0.1, le=100)
+    rate_limit: float | None = Field(default=0.5, ge=0.01, le=100)
     """req/s. 全局 network.rate_limits 有此站点域名时全局优先."""
 
 
@@ -294,10 +313,52 @@ class ScrapingConfig(BaseModel):
     )
 
     site_config: dict[str, SiteConfig] = Field(
-        default_factory=lambda: {str(site): SiteConfig() for site in SiteName},
+        default_factory=lambda: {str(site): SiteConfig(rate_limit=_site_default_rate(site)) for site in SiteName},
         json_schema_extra={"x-frozen-keys": True},
     )
     """含影片站与演员站."""
+
+    @model_validator(mode="before")
+    @classmethod
+    def _migrate_fc2ppvdb(cls, data: Any) -> Any:
+        """旧 FC2PPVDB 来源标识迁移至 FC2CMADB."""
+        if not isinstance(data, dict):
+            return data
+        data = dict(data)
+
+        site_config = data.get("site_config")
+        if isinstance(site_config, dict):
+            site_config = dict(site_config)
+            legacy = site_config.pop("fc2ppvdb", None)
+            if "fc2cmadb" not in site_config and legacy is not None:
+                site_config["fc2cmadb"] = legacy
+            current = site_config.get("fc2cmadb")
+            if isinstance(current, dict):
+                current = dict(current)
+                host = urlsplit(str(current.get("base_url") or "")).hostname
+                if host and (host == "fc2ppvdb.com" or host.endswith(".fc2ppvdb.com")):
+                    current["base_url"] = "https://fc2cmadb.com"
+                    current["cookie"] = {}
+                site_config["fc2cmadb"] = current
+            data["site_config"] = site_config
+
+        for key in ("content_routes", "field_priority", "field_blacklist"):
+            mapping = data.get(key)
+            if not isinstance(mapping, dict):
+                continue
+            migrated: dict[Any, Any] = {}
+            for field, route in mapping.items():
+                if not isinstance(route, list):
+                    migrated[field] = route
+                    continue
+                values: list[Any] = []
+                for site in route:
+                    value = "fc2cmadb" if _site_value(site) == "fc2ppvdb" else site
+                    if _site_value(value) not in {_site_value(item) for item in values}:
+                        values.append(value)
+                migrated[field] = values
+            data[key] = migrated
+        return data
 
     @field_validator("content_routes", mode="before")
     @classmethod
@@ -314,7 +375,12 @@ class ScrapingConfig(BaseModel):
     @field_validator("site_config", mode="before")
     @classmethod
     def _complete_site_config(cls, v: Any) -> Any:
-        return _complete_frozen_dict(v, {str(site): {} for site in SiteName})
+        if isinstance(v, dict):
+            v = {
+                key: {"rate_limit": _site_default_rate(key), **value} if isinstance(value, dict) else value
+                for key, value in v.items()
+            }
+        return _complete_frozen_dict(v, {str(site): {"rate_limit": _site_default_rate(site)} for site in SiteName})
 
     @field_validator("field_priority")
     @classmethod
@@ -444,6 +510,12 @@ class WatermarkConfig(BaseModel):
 
 
 class NetworkConfig(BaseModel):
+    retry_backoff: float = Field(default=2.0, ge=0.1, le=60)
+    retry_max_wait: float = Field(default=60.0, ge=1, le=300)
+    request_jitter: float = Field(default=0.3, ge=0, le=1)
+    host_concurrency: int = Field(default=1, ge=1, le=10)
+    negative_cache_ttl: float = Field(default=43200.0, ge=0, le=86400)
+    """进程内 GET 404 缓存秒数; 不缓存认证失败, 重建网络栈时清空."""
     proxy: str | None = None
     timeout: float = Field(default=10.0, ge=5.0, le=300.0)
     max_retries: int = Field(default=3, ge=0, le=10)
@@ -458,7 +530,7 @@ class NetworkConfig(BaseModel):
     rate_limits: dict[str, float] = Field(default_factory=dict)
     """优先级高于站点配置."""
 
-    default_rate_limit: float = Field(default=5, ge=0.1, le=100)
+    default_rate_limit: float = Field(default=0.5, ge=0.1, le=100)
     """优先级低于 network.rate_limits 与站点配置."""
 
 

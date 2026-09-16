@@ -3,7 +3,7 @@ name: CI
 on:
   workflow_dispatch:
   push:
-    branches: [main, develop, custom]
+    branches: [main, develop, custom, codex/fc2-multisource-scrapers]
     paths-ignore:
       - "**.md"
       - "docs/**"

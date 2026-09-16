@@ -80,7 +80,6 @@
             "faleno": "faleno",
             "fc2": "fc2",
             "fc2club": "fc2club",
-            "fc2ppvdb": "fc2ppvdb",
             "freejavbt": "freejavbt",
             "getchu": "getchu",
             "gfriends": "gfriends",
@@ -98,7 +97,10 @@
             "r18dev": "r18dev",
             "theporndb": "theporndb",
             "wikipedia": "wikipedia",
-            "xcity": "xcity"
+            "xcity": "xcity",
+            "fc2cmadb": "FC2CMADB",
+            "fd2ppv": "FD2PPV",
+            "javarchive": "JavArchive"
           },
           "$": {
             "options": {
@@ -109,7 +111,6 @@
               "faleno": "faleno",
               "fc2": "fc2",
               "fc2club": "fc2club",
-              "fc2ppvdb": "fc2ppvdb",
               "freejavbt": "freejavbt",
               "getchu": "getchu",
               "gfriends": "gfriends",
@@ -127,7 +128,10 @@
               "r18dev": "r18dev",
               "theporndb": "theporndb",
               "wikipedia": "wikipedia",
-              "xcity": "xcity"
+              "xcity": "xcity",
+              "fc2cmadb": "FC2CMADB",
+              "fd2ppv": "FD2PPV",
+              "javarchive": "JavArchive"
             }
           }
         }
@@ -161,7 +165,6 @@
             "faleno": "faleno",
             "fc2": "fc2",
             "fc2club": "fc2club",
-            "fc2ppvdb": "fc2ppvdb",
             "freejavbt": "freejavbt",
             "getchu": "getchu",
             "gfriends": "gfriends",
@@ -179,7 +182,10 @@
             "r18dev": "r18dev",
             "theporndb": "theporndb",
             "wikipedia": "wikipedia",
-            "xcity": "xcity"
+            "xcity": "xcity",
+            "fc2cmadb": "FC2CMADB",
+            "fd2ppv": "FD2PPV",
+            "javarchive": "JavArchive"
           },
           "$": {
             "options": {
@@ -190,7 +196,6 @@
               "faleno": "faleno",
               "fc2": "fc2",
               "fc2club": "fc2club",
-              "fc2ppvdb": "fc2ppvdb",
               "freejavbt": "freejavbt",
               "getchu": "getchu",
               "gfriends": "gfriends",
@@ -208,7 +213,10 @@
               "r18dev": "r18dev",
               "theporndb": "theporndb",
               "wikipedia": "wikipedia",
-              "xcity": "xcity"
+              "xcity": "xcity",
+              "fc2cmadb": "FC2CMADB",
+              "fd2ppv": "FD2PPV",
+              "javarchive": "JavArchive"
             }
           }
         }
@@ -252,7 +260,6 @@
           "faleno": "faleno",
           "fc2": "fc2",
           "fc2club": "fc2club",
-          "fc2ppvdb": "fc2ppvdb",
           "freejavbt": "freejavbt",
           "getchu": "getchu",
           "gfriends": "gfriends",
@@ -270,7 +277,10 @@
           "r18dev": "r18dev",
           "theporndb": "theporndb",
           "wikipedia": "wikipedia",
-          "xcity": "xcity"
+          "xcity": "xcity",
+          "fc2cmadb": "FC2CMADB",
+          "fd2ppv": "FD2PPV",
+          "javarchive": "JavArchive"
         },
         "$": {
           "base_url": {
@@ -357,7 +367,6 @@
             "faleno": "faleno",
             "fc2": "fc2",
             "fc2club": "fc2club",
-            "fc2ppvdb": "fc2ppvdb",
             "freejavbt": "freejavbt",
             "getchu": "getchu",
             "gfriends": "gfriends",
@@ -375,7 +384,10 @@
             "r18dev": "r18dev",
             "theporndb": "theporndb",
             "wikipedia": "wikipedia",
-            "xcity": "xcity"
+            "xcity": "xcity",
+            "fc2cmadb": "FC2CMADB",
+            "fd2ppv": "FD2PPV",
+            "javarchive": "JavArchive"
           },
           "$": {
             "options": {
@@ -386,7 +398,6 @@
               "faleno": "faleno",
               "fc2": "fc2",
               "fc2club": "fc2club",
-              "fc2ppvdb": "fc2ppvdb",
               "freejavbt": "freejavbt",
               "getchu": "getchu",
               "gfriends": "gfriends",
@@ -404,7 +415,10 @@
               "r18dev": "r18dev",
               "theporndb": "theporndb",
               "wikipedia": "wikipedia",
-              "xcity": "xcity"
+              "xcity": "xcity",
+              "fc2cmadb": "FC2CMADB",
+              "fd2ppv": "FD2PPV",
+              "javarchive": "JavArchive"
             }
           }
         }
@@ -450,6 +464,26 @@
       "default_rate_limit": {
         "label": "默认速率限制",
         "description": "未设置网站默认请求速率"
+      },
+      "retry_backoff": {
+        "label": "重试退避",
+        "description": "重试基础等待秒数, 每次失败后翻倍。"
+      },
+      "retry_max_wait": {
+        "label": "最大重试等待",
+        "description": "Retry-After 超过此秒数时结束本次请求。"
+      },
+      "request_jitter": {
+        "label": "请求时间抖动",
+        "description": "在主机最短请求间隔之外随机增加等待, 不突破限速。"
+      },
+      "host_concurrency": {
+        "label": "单主机并发",
+        "description": "所有 worker 共用的单主机并发请求上限。"
+      },
+      "negative_cache_ttl": {
+        "label": "未找到缓存",
+        "description": "进程内 GET 404 响应缓存秒数, 设为 0 时禁用。"
       }
     },
     "worker": {

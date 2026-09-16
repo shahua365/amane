@@ -49,9 +49,11 @@ iqqtv 作为有碼中文标题源时: 加入 **censored** 路由, 再在 `field_
 
 **dmm.co.jp / FANZA** — 有碼权威源, 高清图, 字段齐全 (含 plot), 覆盖几乎全部有碼厂; 也是素人第二源, 里番可垫. 不是 FC2 / 欧美 / 国产站.
 
-**adult.contents.fc2.com** — 官方 FC2 电子市场, 商品 ID 纯数字; 元数据偏卖家自填, 但属第一方, 置于 javdb / fc2ppvdb 之后.
+**adult.contents.fc2.com** — 官方 FC2 电子市场, 商品 ID 纯数字; 元数据偏卖家自填, 但属第一方, 作为 FC2 路由首选, 保留来源 ID `fc2`.
 
-**fc2ppvdb.com** — FC2 专用索引, 可能被 Cloudflare Access denied; 拦截后回落到后续源.
+**fc2cmadb.com / fd2ppv.cc** — 见 `src/amane/crawlers/sites/fc2cmadb.py::FC2CMADBCrawler` 与 `fd2ppv.py::FD2PPVCrawler`; 会话或挑战失败由来源边界分类, 禁止自动破解.
+
+**javarchive.com** — FC2 HTML 搜索与详情补全见 `src/amane/crawlers/sites/javarchive.py::JavArchiveCrawler`; 不使用边栏或博客发布时间填充作品日期.
 
 **fc2club.top** — 打开后跳转镜像, 不稳定, 不纳入默认表.
 

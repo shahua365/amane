@@ -14,6 +14,10 @@ AI 时代的私人影库
 - **AI 智能助理** — 自然语言检索片库、批量整理、发起刮削
 - **Web 界面** — 海报墙、任务队列、结构化日志、可视化设置
 
+## Fork 增强
+
+FC2 官方优先、JavArchive 补全、FC2CMADB 配置迁移与 FD2PPV 可选来源; 限速和缓存边界见 [刮削说明](docs/user/scraping.md), 验证状态见 [维护交接](handoff/LATEST.md).
+
 ## 安装
 
 - [桌面应用 (macOS / Windows)](https://github.com/sqzw-x/amane/releases) — 下载即用

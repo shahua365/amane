@@ -100,6 +100,11 @@ def build_network_stack(
         max_retries=hot.network.max_retries,
         max_clients=hot.network.max_clients,
         limiters=limiters,
+        retry_backoff=hot.network.retry_backoff,
+        retry_max_wait=hot.network.retry_max_wait,
+        request_jitter=hot.network.request_jitter,
+        host_concurrency=hot.network.host_concurrency,
+        negative_cache_ttl=hot.network.negative_cache_ttl,
     )
     http_client = HttpClient(web=web_client, browser=None)
     factory = CrawlerFactory(

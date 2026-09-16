@@ -242,8 +242,29 @@ async def execute_graph(
             await on_progress(_scalar_progress(unsatisfied), field_total, sites)
 
     _assemble_aggregate_fields(graph, state)
+    if query.number.startswith("FC2-PPV-"):
+        _enrich_fc2(graph, state)
     _fill_actor_genders(state.result, state.fetched)
     return state
+
+
+def _enrich_fc2(graph: FetchGraph, state: ExecutionState) -> None:
+    """FC2 空字段允许后续来源补全; 有效字段仍服从既有字段链."""
+    for field in SCALAR_FIELDS:
+        for node in graph.field_chains[field]:
+            data = state.fetched.get(node.cache_key)
+            if data is not None and data.model_dump().get(field):
+                state.result.field_sources.pop(field, None)
+                _fill_scalar(state.result, field, data, node.cache_key)
+                break
+    tags: list[str] = []
+    for node in graph.field_chains[MetadataField.TAGS]:
+        data = state.fetched.get(node.cache_key)
+        if data is not None:
+            for tag in data.tags:
+                if tag.strip() and tag.strip() not in tags:
+                    tags.append(tag.strip())
+    state.result.tags = tags
 
 
 def _resolve_lang(

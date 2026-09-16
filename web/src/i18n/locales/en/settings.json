@@ -80,7 +80,6 @@
             "faleno": "faleno",
             "fc2": "fc2",
             "fc2club": "fc2club",
-            "fc2ppvdb": "fc2ppvdb",
             "freejavbt": "freejavbt",
             "getchu": "getchu",
             "gfriends": "gfriends",
@@ -98,7 +97,10 @@
             "r18dev": "r18dev",
             "theporndb": "theporndb",
             "wikipedia": "wikipedia",
-            "xcity": "xcity"
+            "xcity": "xcity",
+            "fc2cmadb": "FC2CMADB",
+            "fd2ppv": "FD2PPV",
+            "javarchive": "JavArchive"
           },
           "$": {
             "options": {
@@ -109,7 +111,6 @@
               "faleno": "faleno",
               "fc2": "fc2",
               "fc2club": "fc2club",
-              "fc2ppvdb": "fc2ppvdb",
               "freejavbt": "freejavbt",
               "getchu": "getchu",
               "gfriends": "gfriends",
@@ -127,7 +128,10 @@
               "r18dev": "r18dev",
               "theporndb": "theporndb",
               "wikipedia": "wikipedia",
-              "xcity": "xcity"
+              "xcity": "xcity",
+              "fc2cmadb": "FC2CMADB",
+              "fd2ppv": "FD2PPV",
+              "javarchive": "JavArchive"
             }
           }
         }
@@ -161,7 +165,6 @@
             "faleno": "faleno",
             "fc2": "fc2",
             "fc2club": "fc2club",
-            "fc2ppvdb": "fc2ppvdb",
             "freejavbt": "freejavbt",
             "getchu": "getchu",
             "gfriends": "gfriends",
@@ -179,7 +182,10 @@
             "r18dev": "r18dev",
             "theporndb": "theporndb",
             "wikipedia": "wikipedia",
-            "xcity": "xcity"
+            "xcity": "xcity",
+            "fc2cmadb": "FC2CMADB",
+            "fd2ppv": "FD2PPV",
+            "javarchive": "JavArchive"
           },
           "$": {
             "options": {
@@ -190,7 +196,6 @@
               "faleno": "faleno",
               "fc2": "fc2",
               "fc2club": "fc2club",
-              "fc2ppvdb": "fc2ppvdb",
               "freejavbt": "freejavbt",
               "getchu": "getchu",
               "gfriends": "gfriends",
@@ -208,7 +213,10 @@
               "r18dev": "r18dev",
               "theporndb": "theporndb",
               "wikipedia": "wikipedia",
-              "xcity": "xcity"
+              "xcity": "xcity",
+              "fc2cmadb": "FC2CMADB",
+              "fd2ppv": "FD2PPV",
+              "javarchive": "JavArchive"
             }
           }
         }
@@ -252,7 +260,6 @@
           "faleno": "faleno",
           "fc2": "fc2",
           "fc2club": "fc2club",
-          "fc2ppvdb": "fc2ppvdb",
           "freejavbt": "freejavbt",
           "getchu": "getchu",
           "gfriends": "gfriends",
@@ -270,7 +277,10 @@
           "r18dev": "r18dev",
           "theporndb": "theporndb",
           "wikipedia": "wikipedia",
-          "xcity": "xcity"
+          "xcity": "xcity",
+          "fc2cmadb": "FC2CMADB",
+          "fd2ppv": "FD2PPV",
+          "javarchive": "JavArchive"
         },
         "$": {
           "base_url": {
@@ -357,7 +367,6 @@
             "faleno": "faleno",
             "fc2": "fc2",
             "fc2club": "fc2club",
-            "fc2ppvdb": "fc2ppvdb",
             "freejavbt": "freejavbt",
             "getchu": "getchu",
             "gfriends": "gfriends",
@@ -375,7 +384,10 @@
             "r18dev": "r18dev",
             "theporndb": "theporndb",
             "wikipedia": "wikipedia",
-            "xcity": "xcity"
+            "xcity": "xcity",
+            "fc2cmadb": "FC2CMADB",
+            "fd2ppv": "FD2PPV",
+            "javarchive": "JavArchive"
           },
           "$": {
             "options": {
@@ -386,7 +398,6 @@
               "faleno": "faleno",
               "fc2": "fc2",
               "fc2club": "fc2club",
-              "fc2ppvdb": "fc2ppvdb",
               "freejavbt": "freejavbt",
               "getchu": "getchu",
               "gfriends": "gfriends",
@@ -404,7 +415,10 @@
               "r18dev": "r18dev",
               "theporndb": "theporndb",
               "wikipedia": "wikipedia",
-              "xcity": "xcity"
+              "xcity": "xcity",
+              "fc2cmadb": "FC2CMADB",
+              "fd2ppv": "FD2PPV",
+              "javarchive": "JavArchive"
             }
           }
         }
@@ -450,6 +464,26 @@
       "default_rate_limit": {
         "label": "Default Rate Limit",
         "description": "Default request rate for sites without an override"
+      },
+      "retry_backoff": {
+        "label": "Retry Backoff",
+        "description": "Base retry delay in seconds; doubles between attempts."
+      },
+      "retry_max_wait": {
+        "label": "Maximum Retry Wait",
+        "description": "Stop this request if Retry-After exceeds this many seconds."
+      },
+      "request_jitter": {
+        "label": "Request Jitter",
+        "description": "Random extra delay around the configured host interval; never sends faster than the rate limit."
+      },
+      "host_concurrency": {
+        "label": "Connections per Host",
+        "description": "Shared upper bound for concurrent requests to one host."
+      },
+      "negative_cache_ttl": {
+        "label": "Not Found Cache",
+        "description": "Seconds to cache GET 404 responses in this process; zero disables caching."
       }
     },
     "worker": {

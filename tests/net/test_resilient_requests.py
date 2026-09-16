@@ -1,0 +1,88 @@
+import asyncio
+import time
+from itertools import pairwise
+from unittest.mock import AsyncMock
+
+import pytest
+from curl_cffi.requests import Response
+
+from amane.net.errors import RequestError
+from amane.net.http import RateLimiters, WebClient, _retry_after
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"), [("15", 15), (None, 0), ("invalid", 0), ("-2", 0), ("Wed, 21 Oct 2015 07:28:00 GMT", 0)]
+)
+def test_retry_after_parse(value: str | None, expected: float) -> None:
+    assert _retry_after(value) == expected
+
+
+@pytest.mark.parametrize("status", [403, 404, 429, 503])
+@pytest.mark.asyncio
+async def test_retry_boundaries(status: int) -> None:
+    client = WebClient(limiters=RateLimiters(default_rate=100), max_retries=2, request_jitter=0, retry_backoff=0.001)
+    response = Response()
+    response.status_code = status
+    response.headers["Retry-After"] = "120"
+    client._session.request = AsyncMock(return_value=response)
+    try:
+        with pytest.raises(RequestError) as err:
+            await client.request("GET", "https://example.com/item")
+        assert err.value.http_status == status
+        assert client._session.request.call_count == 1
+        if status == 429:
+            with pytest.raises(RequestError) as cooldown:
+                await client.request("GET", "https://example.com/other-item")
+            assert cooldown.value.http_status == 429
+            assert client._session.request.call_count == 1
+        if status == 404:
+            with pytest.raises(RequestError):
+                await client.request("GET", "https://example.com/item")
+            assert client._session.request.call_count == 1
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_workers_and_retries_share_host_budget() -> None:
+    client = WebClient(
+        limiters=RateLimiters(default_rate=25),
+        max_retries=2,
+        request_jitter=0.3,
+        retry_backoff=0.001,
+        host_concurrency=3,
+    )
+    times: list[float] = []
+
+    async def send(*args: object, **kwargs: object) -> Response:
+        times.append(time.monotonic())
+        response = Response()
+        response.status_code = 503 if len(times) == 1 else 200
+        return response
+
+    client._session.request = AsyncMock(side_effect=send)
+    try:
+        await asyncio.gather(*(client.request("GET", f"https://example.com/{n}") for n in range(3)))
+        assert len(times) == 4
+        assert all(b - a >= 0.035 for a, b in pairwise(times))
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_retired_redirect_never_sent() -> None:
+    client = WebClient(limiters=RateLimiters(default_rate=100), max_retries=1, request_jitter=0)
+    response = Response()
+    response.status_code = 302
+    response.headers["Location"] = "https://fc2ppvdb.com/articles/1"
+    client._session.request = AsyncMock(return_value=response)
+    try:
+        with pytest.raises(RequestError) as err:
+            await client.request("GET", "https://example.com/item")
+        assert err.value.http_status == 410
+        assert client._session.request.call_count == 1
+        with pytest.raises(RequestError):
+            await client.request("GET", "https://fc2ppvdb.com/articles/1")
+        assert client._session.request.call_count == 1
+    finally:
+        await client.close()

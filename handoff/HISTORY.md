@@ -9,3 +9,10 @@
 - 本地 lint、format、typecheck、OpenAPI/client 漂移检查及前端构建通过; Python 测试仅因 Windows 符号链接权限出现 4 项环境失败
 - 验证基线 `a2ca0dbd2c4043eb23a4a2f6d913b524022f10a8` 的 GitHub Actions CI #1 全部通过, 包含 Ubuntu、Windows 与 Docker build
 - 未修改业务功能、生产配置或 NAS
+
+## 2026-09-16 — FC2 多源增强
+
+- 沿用指定会话的 FC2CMADB/FD2PPV 实现和年龄验证修复, 适配当前 v0.14.0 架构.
+- 复用官方 FC2, 增加有实际 HTML 依据的 JavArchive; 强化限速、查询规范化、补空和图片缓存复用.
+- 受限或未确认站点保留真实验证边界; 完整审计见 [报告](reports/fc2-audit-20260915.md).
+- 本机全量测试仅保留四项 Windows 符号链接环境失败; CI 和 NAS 隔离测试结果待后续验证记录.

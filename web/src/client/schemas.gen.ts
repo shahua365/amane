@@ -2120,9 +2120,11 @@ export const HotSettingsSchema = {
                         'freejavbt'
                     ],
                     fc2: [
-                        'javdb',
-                        'fc2ppvdb',
                         'fc2',
+                        'javarchive',
+                        'javdb',
+                        'fc2cmadb',
+                        'fd2ppv',
                         'freejavbt'
                     ],
                     hentai: [
@@ -2158,182 +2160,196 @@ export const HotSettingsSchema = {
                     airav: {
                         cookie: {},
                         official_routes: {},
-                        rate_limit: 2,
+                        rate_limit: 0.2,
                         use_browser: false,
                         use_proxy: true
                     },
                     avsox: {
                         cookie: {},
                         official_routes: {},
-                        rate_limit: 2,
+                        rate_limit: 0.1,
                         use_browser: false,
                         use_proxy: true
                     },
                     dahlia: {
                         cookie: {},
                         official_routes: {},
-                        rate_limit: 2,
+                        rate_limit: 0.5,
                         use_browser: false,
                         use_proxy: true
                     },
                     dmm: {
                         cookie: {},
                         official_routes: {},
-                        rate_limit: 2,
+                        rate_limit: 0.5,
                         use_browser: false,
                         use_proxy: true
                     },
                     faleno: {
                         cookie: {},
                         official_routes: {},
-                        rate_limit: 2,
+                        rate_limit: 0.5,
                         use_browser: false,
                         use_proxy: true
                     },
                     fc2: {
                         cookie: {},
                         official_routes: {},
-                        rate_limit: 2,
+                        rate_limit: 0.3,
                         use_browser: false,
                         use_proxy: true
                     },
                     fc2club: {
                         cookie: {},
                         official_routes: {},
-                        rate_limit: 2,
+                        rate_limit: 0.05,
                         use_browser: false,
                         use_proxy: true
                     },
-                    fc2ppvdb: {
+                    fc2cmadb: {
                         cookie: {},
                         official_routes: {},
-                        rate_limit: 2,
+                        rate_limit: 0.02,
+                        use_browser: false,
+                        use_proxy: true
+                    },
+                    fd2ppv: {
+                        cookie: {},
+                        official_routes: {},
+                        rate_limit: 0.05,
                         use_browser: false,
                         use_proxy: true
                     },
                     freejavbt: {
                         cookie: {},
                         official_routes: {},
-                        rate_limit: 2,
+                        rate_limit: 0.2,
                         use_browser: false,
                         use_proxy: true
                     },
                     getchu: {
                         cookie: {},
                         official_routes: {},
-                        rate_limit: 2,
+                        rate_limit: 0.5,
                         use_browser: false,
                         use_proxy: true
                     },
                     gfriends: {
                         cookie: {},
                         official_routes: {},
-                        rate_limit: 2,
+                        rate_limit: 1,
                         use_browser: false,
                         use_proxy: true
                     },
                     giga: {
                         cookie: {},
                         official_routes: {},
-                        rate_limit: 2,
+                        rate_limit: 0.5,
                         use_browser: false,
                         use_proxy: true
                     },
                     iqqtv: {
                         cookie: {},
                         official_routes: {},
-                        rate_limit: 2,
+                        rate_limit: 0.2,
                         use_browser: false,
                         use_proxy: true
                     },
                     jav321: {
                         cookie: {},
                         official_routes: {},
-                        rate_limit: 2,
+                        rate_limit: 0.2,
+                        use_browser: false,
+                        use_proxy: true
+                    },
+                    javarchive: {
+                        cookie: {},
+                        official_routes: {},
+                        rate_limit: 0.3,
                         use_browser: false,
                         use_proxy: true
                     },
                     javbus: {
                         cookie: {},
                         official_routes: {},
-                        rate_limit: 2,
+                        rate_limit: 0.2,
                         use_browser: false,
                         use_proxy: true
                     },
                     javdb: {
                         cookie: {},
                         official_routes: {},
-                        rate_limit: 2,
+                        rate_limit: 0.05,
                         use_browser: false,
                         use_proxy: true
                     },
                     javlibrary: {
                         cookie: {},
                         official_routes: {},
-                        rate_limit: 2,
+                        rate_limit: 0.1,
                         use_browser: false,
                         use_proxy: true
                     },
                     kin8: {
                         cookie: {},
                         official_routes: {},
-                        rate_limit: 2,
+                        rate_limit: 0.5,
                         use_browser: false,
                         use_proxy: true
                     },
                     mgstage: {
                         cookie: {},
                         official_routes: {},
-                        rate_limit: 2,
+                        rate_limit: 0.5,
                         use_browser: false,
                         use_proxy: true
                     },
                     minnano: {
                         cookie: {},
                         official_routes: {},
-                        rate_limit: 2,
+                        rate_limit: 0.5,
                         use_browser: false,
                         use_proxy: true
                     },
                     official: {
                         cookie: {},
                         official_routes: {},
-                        rate_limit: 2,
+                        rate_limit: 0.5,
                         use_browser: false,
                         use_proxy: true
                     },
                     prestige: {
                         cookie: {},
                         official_routes: {},
-                        rate_limit: 2,
+                        rate_limit: 0.5,
                         use_browser: false,
                         use_proxy: true
                     },
                     r18dev: {
                         cookie: {},
                         official_routes: {},
-                        rate_limit: 2,
+                        rate_limit: 0.5,
                         use_browser: false,
                         use_proxy: true
                     },
                     theporndb: {
                         cookie: {},
                         official_routes: {},
-                        rate_limit: 2,
+                        rate_limit: 0.5,
                         use_browser: false,
                         use_proxy: true
                     },
                     wikipedia: {
                         cookie: {},
                         official_routes: {},
-                        rate_limit: 2,
+                        rate_limit: 1,
                         use_browser: false,
                         use_proxy: true
                     },
                     xcity: {
                         cookie: {},
                         official_routes: {},
-                        rate_limit: 2,
+                        rate_limit: 0.5,
                         use_browser: false,
                         use_proxy: true
                     }
@@ -2375,6 +2391,11 @@ export const HotSettingsSchema = {
         network: {
             $ref: '#/components/schemas/NetworkConfig',
             default: {
+                retry_backoff: 2,
+                retry_max_wait: 60,
+                request_jitter: 0.3,
+                host_concurrency: 1,
+                negative_cache_ttl: 43200,
                 timeout: 10,
                 max_retries: 3,
                 max_clients: 50,
@@ -2383,7 +2404,7 @@ export const HotSettingsSchema = {
                 chunk_size: 1048576,
                 concurrency: 10,
                 rate_limits: {},
-                default_rate_limit: 5
+                default_rate_limit: 0.5
             }
         },
         sr: {
@@ -4491,6 +4512,41 @@ export const MoveModeSchema = {
 
 export const NetworkConfigSchema = {
     properties: {
+        retry_backoff: {
+            type: 'number',
+            maximum: 60,
+            minimum: 0.1,
+            title: 'Retry Backoff',
+            default: 2
+        },
+        retry_max_wait: {
+            type: 'number',
+            maximum: 300,
+            minimum: 1,
+            title: 'Retry Max Wait',
+            default: 60
+        },
+        request_jitter: {
+            type: 'number',
+            maximum: 1,
+            minimum: 0,
+            title: 'Request Jitter',
+            default: 0.3
+        },
+        host_concurrency: {
+            type: 'integer',
+            maximum: 10,
+            minimum: 1,
+            title: 'Host Concurrency',
+            default: 1
+        },
+        negative_cache_ttl: {
+            type: 'number',
+            maximum: 86400,
+            minimum: 0,
+            title: 'Negative Cache Ttl',
+            default: 43200
+        },
         proxy: {
             anyOf: [
                 {
@@ -4565,7 +4621,7 @@ export const NetworkConfigSchema = {
             maximum: 100,
             minimum: 0.1,
             title: 'Default Rate Limit',
-            default: 5
+            default: 0.5
         }
     },
     type: 'object',
@@ -5796,12 +5852,14 @@ export const ScrapingConfigSchema = {
                         'faleno',
                         'fc2',
                         'fc2club',
-                        'fc2ppvdb',
+                        'fc2cmadb',
+                        'fd2ppv',
                         'freejavbt',
                         'getchu',
                         'giga',
                         'iqqtv',
                         'jav321',
+                        'javarchive',
                         'javbus',
                         'javdb',
                         'javlibrary',
@@ -5836,12 +5894,14 @@ export const ScrapingConfigSchema = {
                         'faleno',
                         'fc2',
                         'fc2club',
-                        'fc2ppvdb',
+                        'fc2cmadb',
+                        'fd2ppv',
                         'freejavbt',
                         'getchu',
                         'giga',
                         'iqqtv',
                         'jav321',
+                        'javarchive',
                         'javbus',
                         'javdb',
                         'javlibrary',
@@ -5876,12 +5936,14 @@ export const ScrapingConfigSchema = {
                         'faleno',
                         'fc2',
                         'fc2club',
-                        'fc2ppvdb',
+                        'fc2cmadb',
+                        'fd2ppv',
                         'freejavbt',
                         'getchu',
                         'giga',
                         'iqqtv',
                         'jav321',
+                        'javarchive',
                         'javbus',
                         'javdb',
                         'javlibrary',
@@ -5988,14 +6050,14 @@ export const SiteConfigSchema = {
                 {
                     type: 'number',
                     maximum: 100,
-                    minimum: 0.1
+                    minimum: 0.01
                 },
                 {
                     type: 'null'
                 }
             ],
             title: 'Rate Limit',
-            default: 2
+            default: 0.5
         }
     },
     type: 'object',
@@ -6012,13 +6074,15 @@ export const SiteNameSchema = {
         'faleno',
         'fc2',
         'fc2club',
-        'fc2ppvdb',
+        'fc2cmadb',
+        'fd2ppv',
         'freejavbt',
         'getchu',
         'gfriends',
         'giga',
         'iqqtv',
         'jav321',
+        'javarchive',
         'javbus',
         'javdb',
         'javlibrary',

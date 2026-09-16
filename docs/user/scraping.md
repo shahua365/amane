@@ -31,7 +31,7 @@
 | ------ | --------- |
 | 有码 | dmm → javdb → javbus → official |
 | 无码 | javdb → javbus → avsox → freejavbt |
-| FC2 | javdb → fc2ppvdb → fc2 → freejavbt |
+| FC2 | fc2 → javarchive → javdb → fc2cmadb → fd2ppv → freejavbt |
 | 中文 | iqqtv → javdb → airav → freejavbt |
 | 素人 | mgstage → dmm → javdb → javbus |
 | 欧美 | theporndb → javdb → freejavbt |
@@ -171,3 +171,19 @@ r18.dev 是一个特殊的离线数据源, 提供 PostgreSQL dump:
 2. 检查 API 密钥是否有效
 3. 自定义提示词未生效时检查提示词是否留空, 以及该字段是否在翻译字段列表中
 4. 删除 `translations.db` 强制重译
+
+## FC2 来源与稳定性
+
+`fc2` 为官方来源, 不另建重复的 `fc2_official` 注册. FC2CMADB 支持已有通用 Cookie 设置; 缺少会话或遇到挑战时允许失败并继续其他来源. FD2PPV 的可用性仍受 Cloudflare 限制. MissJAV、Thikana、7MMTV、AV01 未确认可靠接入, 不纳入路由.
+
+限速单位为请求/秒; 网络 host 覆盖优先于单站设置. 请求抖动只增加等待, 重试和重定向均共享主机限速. GET 404 默认缓存 12 小时, 修改网络设置重建客户端后清空.
+
+```toml
+[scraping.site_config.fc2cmadb]
+rate_limit = 0.02
+# 在本机设置中填写有效同域 Cookie, 不提交配置或会话值.
+[scraping.site_config.fc2cmadb.cookie]
+fc2cmadb-session = "YOUR_SESSION_COOKIE"
+```
+
+刮削时保持 poster、thumb、extrafanart 资源下载开启. 已缓存文件可在原始 URL 失效后复用; 从未成功下载的图片无法保证离线整理. 原始标题保存在官方来源 raw, 翻译不改写该快照.

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased (Fork)
+
+- FC2CMADB 替换失效来源, 增加 FD2PPV 与 JavArchive, 复用官方 FC2 来源与 Cookie 注入.
+- FC2 查询规范化、缺失字段补全与标签去重; 保留已有数据库身份和原始来源快照.
+- 差异化限速、逐重试/重定向许可、主机并发、404 负缓存与 Retry-After; 整理资源优先复用本地缓存.
+
 ## v0.14.0
 
 ### ✨ 新功能

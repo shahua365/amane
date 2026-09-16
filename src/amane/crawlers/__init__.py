@@ -20,13 +20,15 @@ from .sites import (
     DmmCrawler,
     FalenoCrawler,
     FC2ClubCrawler,
+    FC2CMADBCrawler,
     FC2Crawler,
-    FC2PPVDBCrawler,
+    FD2PPVCrawler,
     FreejavbtCrawler,
     GetchuCrawler,
     GigaCrawler,
     IqqtvCrawler,
     Jav321Crawler,
+    JavArchiveCrawler,
     JavBusCrawler,
     JavDBCrawler,
     JavLibraryCrawler,
@@ -55,7 +57,9 @@ registry.register(FalenoCrawler)
 registry.register(GigaCrawler)
 registry.register(Kin8Crawler)
 registry.register(FC2ClubCrawler)
-registry.register(FC2PPVDBCrawler)
+registry.register(FC2CMADBCrawler)
+registry.register(FD2PPVCrawler)
+registry.register(JavArchiveCrawler)
 registry.register(GetchuCrawler)
 registry.register(IqqtvCrawler)
 registry.register(PrestigeCrawler)
@@ -73,9 +77,10 @@ __all__ = [
     "Crawler",
     "DahliaCrawler",
     "DmmCrawler",
+    "FC2CMADBCrawler",
     "FC2ClubCrawler",
     "FC2Crawler",
-    "FC2PPVDBCrawler",
+    "FD2PPVCrawler",
     "FalenoCrawler",
     "FetchOptions",
     "FilmActor",
@@ -86,6 +91,7 @@ __all__ = [
     "HttpClient",
     "IqqtvCrawler",
     "Jav321Crawler",
+    "JavArchiveCrawler",
     "JavBusCrawler",
     "JavDBActorCrawler",
     "JavDBCrawler",

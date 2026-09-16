@@ -254,6 +254,11 @@ class ResourceStore:
         if not urls:
             return AcquireResult(success=False, failed=[])
 
+        for url in urls:
+            cached = await self.resolve(url)
+            if cached:
+                return AcquireResult(success=True, path=cached, used_url=url, failed=[])
+
         # 逐 URL 尝试, 成功即停.
         failed: list[str] = []
         for url in urls:
@@ -275,7 +280,7 @@ class ResourceStore:
         for site in priority:
             if site not in urls_by_site:
                 continue
-            results = await asyncio.gather(*[self.acquire(u, client) for u in urls_by_site[site]])
+            results = await asyncio.gather(*[self.acquire(u, client) for u in dict.fromkeys(urls_by_site[site])])
             paths = [p for p in results if p is not None]
             if paths:
                 return paths

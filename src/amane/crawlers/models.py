@@ -1,3 +1,4 @@
+import re
 from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -5,12 +6,12 @@ from typing import TYPE_CHECKING
 from pydantic import BaseModel, Field, field_validator
 
 from ..enums import ActorGender
+from ..parsing.file_info import ContentType
 from ..utils.dates import normalize_calendar_date
 
 if TYPE_CHECKING:
     from ..aggregate import AggregatedMetadata
     from ..enums import Language
-    from ..parsing.file_info import ContentType
 
 
 @dataclass
@@ -22,6 +23,13 @@ class SearchQuery:
     # 前序聚合中间结果; 由 Aggregator 注入, 测试可不传.
     partial_result: AggregatedMetadata | None = None
     raw_results: dict[str, MediaMetadata | None] | None = None
+
+    def __post_init__(self) -> None:
+        match = re.fullmatch(r"FC2[-_ ]?(?:PPV[-_ ]?)?(\d+)", self.number.strip(), re.IGNORECASE)
+        if match:
+            self.number = f"FC2-PPV-{match.group(1)}"
+        elif self.content_type == ContentType.FC2 and self.number.strip().isdigit():
+            self.number = f"FC2-PPV-{self.number.strip()}"
 
 
 @dataclass

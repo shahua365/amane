@@ -8,6 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
+from parsel import Selector
 from pydantic import ValidationError
 
 
@@ -142,7 +143,9 @@ def _classify_text(text: str) -> FailureReason | None:
         return FailureReason.CLOUDFLARE_CHALLENGE
     if "driver-verify" in lower:
         return FailureReason.AGE_VERIFICATION
-    if "年齢認証" in text or "age verification" in lower:
+    # 年龄验证仅检查可见文本, 排除脚本翻译字典与属性.
+    page_text = " ".join(Selector(text=text).xpath("//text()[not(ancestor::script or ancestor::style)]").getall())
+    if "年齢認証" in page_text or "age verification" in page_text.lower():
         return FailureReason.AGE_VERIFICATION
     return None
 

@@ -43,6 +43,10 @@ RateLimiters → WebClient → HttpClient → CrawlerFactory
 
 **r18 只读引擎**: 只在 `hot.r18` 实际变化时重建. rebuild 是同步的, 无法 await 释放 asyncpg 连接池, 旧引擎暂存 `_old_r18_db`, 由 config 路由随后 `dispose_old_r18()` 异步关闭.
 
+## 网络限速
+
+`net/http.py::RateLimiters.from_config` 按 host 共用许可; 同 host 的站点默认值取较保守值, 显式 `network.rate_limits` 优先. `WebClient._request_hops` 对重试与重定向逐次限速, 新重定向 host 继承来源速率; 跨 host 移除显式认证头与 Cookie. 429 的 `Retry-After` 超过最大等待时结束当前请求; GET 404 负缓存只在进程内保留, 网络栈重建清空. 参数、单位与范围见 `NetworkConfig`.
+
 ## TOML 持久化
 
 写 TOML 必须用临时文件 + `os.replace` 原子化 — 直接覆盖时写入中途进程中止会留下空文件. `tomli_w` 不接受 `None` / `set`, 持久化前须按 JSON 模式导出并剔除 `None` 与默认值.

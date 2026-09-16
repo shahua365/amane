@@ -231,7 +231,7 @@ class TestScrapingPriorityMigration:
         assert routes[ContentType.HENTAI][0] == SiteName.GETCHU
         assert routes[ContentType.WESTERN][0] == SiteName.THEPORNDB
         assert SiteName.AVSOX in routes[ContentType.UNCENSORED]
-        assert SiteName.FC2PPVDB in routes[ContentType.FC2]
+        assert SiteName.FC2CMADB in routes[ContentType.FC2]
         assert SiteName.OFFICIAL in routes[ContentType.CENSORED]
 
 
@@ -248,8 +248,8 @@ class TestFrozenKeyDictCompleteness:
     @pytest.mark.parametrize(
         ("payload", "javdb_proxy", "javdb_rate"),
         [
-            ({"javdb": {"use_proxy": False}}, False, 2),
-            ({}, True, 2),
+            ({"javdb": {"use_proxy": False}}, False, 0.05),
+            ({}, True, 0.05),
             ({"gone": {"use_proxy": False}, "javdb": {"rate_limit": 1.0}}, True, 1.0),
         ],
     )

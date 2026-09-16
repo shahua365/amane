@@ -14,6 +14,8 @@ class FC2Crawler(Crawler):
         return CrawlerProfile(name=SiteName.FC2, base_url="https://adult.contents.fc2.com")
 
     async def _search(self, query: SearchQuery, options: FetchOptions | None = None) -> str | None:
+        if query.number.isdigit():
+            return None
         number = query.number
         clean_number = self._clean_number(number)
         if not clean_number:
@@ -21,7 +23,7 @@ class FC2Crawler(Crawler):
         return f"{self.base_url}/article/{clean_number}/"
 
     async def _scrape(self, url: str, options: FetchOptions | None = None) -> MediaMetadata | None:
-        text = await self.client.get_html(url)
+        text = await self.client.get_html(url, headers=self.headers, cookies=self.cookies)
         if not text:
             return None
 
@@ -46,6 +48,10 @@ class FC2Crawler(Crawler):
         poster_url = self._ensure_https(poster_raw) if poster_raw else None
 
         release_raw = extract_text(html, '//div[@class="items_article_Releasedate"]/p/text()')
+        if not release_raw:
+            release_raw = extract_text(
+                html, '//div[@class="items_article_softDevice"]/p[contains(.,"Sale Day")]/text()'
+            )
         release = self._parse_release(release_raw)
 
         studio = extract_text(html, '//div[@class="items_article_headerInfo"]/ul/li[last()]/a/text()')
@@ -53,12 +59,20 @@ class FC2Crawler(Crawler):
         tags = extract_all_texts(html, '//a[@class="tag tagTag"]/text()')
 
         plot = extract_text(html, '//meta[@name="description"]/@content')
+        runtime_text = extract_text(html, '//p[@class="items_article_info"]/text()')
+        runtime_match = re.fullmatch(r"(\d+):(\d{2})(?::(\d{2}))?", runtime_text.strip())
+        runtime = None
+        if runtime_match:
+            runtime = int(runtime_match.group(1))
+            if runtime_match.group(3) is not None:
+                runtime = runtime * 60 + int(runtime_match.group(2))
 
         return MediaMetadata(
             number=number,
             title=title,
             studio=studio or None,
             release=release,
+            runtime=runtime,
             tags=tags,
             plot=plot or None,
             poster_urls=[poster_url] if poster_url else [],
