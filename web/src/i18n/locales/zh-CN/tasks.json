@@ -64,7 +64,8 @@
     "group": {
       "failed": "失败",
       "ok": "成功",
-      "cache_hit": "缓存"
+      "cache_hit": "缓存",
+      "blocked": "访问受限 (BLOCKED)"
     },
     "detail": {
       "unknown": "原因未知"

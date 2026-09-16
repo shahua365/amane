@@ -534,6 +534,59 @@
         }
       }
     },
+    "/api/metadata/{metadata_id}/artwork-fallback": {
+      "post": {
+        "tags": [
+          "metadata"
+        ],
+        "summary": "Artwork Fallback",
+        "description": "现有候选全部不可用时导入手工图片, 不重新刮削或修改标量字段.",
+        "operationId": "artwork_fallback",
+        "parameters": [
+          {
+            "name": "metadata_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Metadata Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArtworkFallbackRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetadataResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/metadata/schema": {
       "get": {
         "tags": [
@@ -6475,6 +6528,47 @@
         ],
         "title": "ApiType"
       },
+      "ArtworkFallbackRequest": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "poster",
+              "thumb"
+            ],
+            "title": "Kind",
+            "default": "poster"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2083,
+                "minLength": 1,
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "path": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          }
+        },
+        "type": "object",
+        "title": "ArtworkFallbackRequest"
+      },
       "Body_install_plugin": {
         "properties": {
           "file": {
@@ -11628,6 +11722,7 @@
         "enum": [
           "ok",
           "failed",
+          "blocked",
           "cache_hit"
         ],
         "title": "SiteOutcomeKind"

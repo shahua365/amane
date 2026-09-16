@@ -16,7 +16,7 @@ from aiolimiter import AsyncLimiter
 from curl_cffi import CurlError
 from curl_cffi.requests import AsyncSession, BrowserTypeLiteral, Response
 
-from .errors import FailureKind, RequestError, RequestFailure
+from .errors import FailureKind, FailureReason, RequestError, RequestFailure, classify_block
 from .recording import get_bound_http_recorder, reset_skip_http_body, set_skip_http_body
 
 if TYPE_CHECKING:
@@ -176,6 +176,7 @@ class WebClient:
         self._host_concurrency = host_concurrency
         self._host_slots: dict[str, asyncio.Semaphore] = {}
         self._host_cooldown: dict[str, float] = {}
+        self._blocked_hosts: dict[str, RequestFailure] = {}
         self._not_found: dict[str, float] = {}
         self._negative_cache_ttl = negative_cache_ttl
         self._session = AsyncSession(
@@ -202,6 +203,7 @@ class WebClient:
     ) -> Response:
         """``ok_statuses`` 额外视为成功 (例如 RSS 304), 不重试、不当失败. 重试用尽后抛 ``RequestError``."""
         host = httpx.URL(url).host.rstrip(".")
+        self.raise_if_blocked(url)
         if host == "fc2ppvdb.com" or host.endswith(".fc2ppvdb.com"):
             raise RequestError(url, RequestFailure(kind=FailureKind.HTTP_STATUS, status=410, message="retired source"))
         if method == "GET" and self._not_found.get(url, 0) > time.monotonic():
@@ -250,7 +252,9 @@ class WebClient:
                 )
                 should_retry = resp.status_code in _RETRYABLE_STATUS_CODES
 
-            except RequestError:
+            except RequestError as exc:
+                if exc.blocked and exc.failure is not None:
+                    self._blocked_hosts[host] = exc.failure
                 raise
             except CurlError as e:
                 failure = RequestFailure(kind=FailureKind.CURL, message=f"curl error: {e}")
@@ -312,6 +316,7 @@ class WebClient:
     ) -> Response:
         for _ in range(21):
             host = (urlsplit(url).hostname or "").rstrip(".")
+            self.raise_if_blocked(url)
             if host == "fc2ppvdb.com" or host.endswith(".fc2ppvdb.com"):
                 raise RequestError(
                     url, RequestFailure(kind=FailureKind.HTTP_STATUS, status=410, message="retired source")
@@ -328,6 +333,7 @@ class WebClient:
                 if self._request_jitter:
                     await asyncio.sleep(random.uniform(0, 2 * self._request_jitter) * limiter.time_period)
                 await limiter.acquire()
+                self.raise_if_blocked(url)
                 if self._host_cooldown.get(host, 0) > time.monotonic():
                     raise RequestError(
                         url, RequestFailure(kind=FailureKind.HTTP_STATUS, status=429, message="host cooling down")
@@ -343,6 +349,31 @@ class WebClient:
                     timeout=timeout or self._timeout,
                     allow_redirects=False,
                 )
+                body = _failure_body(resp)
+                reason = (
+                    classify_block(body.decode("utf-8", errors="replace"))
+                    if body and (b"cloudflare" in body.lower() or b"ray-id" in body.lower())
+                    else None
+                )
+                if (
+                    resp.status_code == 403
+                    or reason
+                    in {
+                        FailureReason.CLOUDFLARE_CHALLENGE,
+                        FailureReason.CLOUDFLARE_BLOCKED,
+                    }
+                    or resp.headers.get("cf-mitigated") == "challenge"
+                ):
+                    failure = RequestFailure(
+                        kind=FailureKind.HTTP_STATUS,
+                        status=resp.status_code,
+                        message="BLOCKED: source access denied",
+                        body=body if reason or resp.status_code == 403 else b"Just a moment cloudflare",
+                    )
+                    self._blocked_hosts[host] = failure
+                    logger.warning("source BLOCKED", host=host, status=resp.status_code)
+                    self._record_exchange(method, url, resp=resp, error=failure.message, t0=time.monotonic())
+                    raise RequestError(url, failure)
                 if resp.status_code == 429:
                     delay = max(_retry_after(resp.headers.get("Retry-After")), self._retry_backoff)
                     self._host_cooldown[host] = time.monotonic() + delay
@@ -363,6 +394,28 @@ class WebClient:
                 method, data, json = "GET", None, None
             url = target
         raise RequestError(url, RequestFailure(kind=FailureKind.UNEXPECTED, message="redirect limit exceeded"))
+
+    def raise_if_blocked(self, url: str) -> None:
+        """受限主机在当前客户端生命周期内停止请求, 包括排队请求与重定向."""
+        host = (urlsplit(url).hostname or "").rstrip(".")
+        if failure := self._blocked_hosts.get(host):
+            raise RequestError(url, failure)
+
+    async def download_image(self, url: str, dest: Path) -> bool:
+        """HEAD 不受支持时继续 GET; 拒绝响应与挑战不重试."""
+        try:
+            head = await self.request("HEAD", url, ok_statuses=frozenset({405, 501}))
+            if head.status_code < 300:
+                length = head.headers.get("Content-Length", "")
+                if length.isdigit() and int(length) > 32 * 1024**2:
+                    return False
+            content = await self.get_bytes(url)
+            if not content or len(content) > 32 * 1024**2:
+                return False
+            await asyncio.to_thread(dest.write_bytes, content)
+            return True
+        except RequestError, OSError, ValueError, httpx.InvalidURL:
+            return False
 
     def _record_exchange(
         self,

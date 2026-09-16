@@ -45,6 +45,7 @@ class TaskSnapshot(BaseModel):
 class SiteOutcomeKind(StrEnum):
     OK = "ok"
     FAILED = "failed"
+    BLOCKED = "blocked"
     CACHE_HIT = "cache_hit"
 
 

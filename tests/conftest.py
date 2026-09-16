@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from amane.db.repository import Repository
 from amane.media import ResourceStore
+from tests.artwork_support import ImageHTTP
 from tests.schema_template import copy_schema
 
 if TYPE_CHECKING:
@@ -15,6 +16,13 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from sqlalchemy.ext.asyncio import AsyncEngine
+
+
+@pytest_asyncio.fixture
+async def image_http() -> AsyncGenerator[ImageHTTP]:
+    http = ImageHTTP()
+    yield http
+    await http.client.close()
 
 
 def _file_engine(db_path: Path) -> AsyncEngine:

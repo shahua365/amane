@@ -13,6 +13,7 @@ from amane.enums import SiteName
 from amane.handlers import OrganizeHandler, OrganizePayload, ScrapeHandler, ScrapePayload
 from amane.organize import MoveMode
 from amane.parsing import ContentType
+from tests.artwork_support import image_bytes
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -82,11 +83,12 @@ async def test_full_pipeline_with_post_processing(repo: Repository, fake_factory
 
     async def _fake_download(url: str, dest: Path) -> bool:
         dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_bytes(b"fake image data")
+        dest.write_bytes(image_bytes())
         return True
 
     mock_web_client = AsyncMock()
     mock_web_client.download = AsyncMock(side_effect=_fake_download)
+    mock_web_client.download_image = AsyncMock(side_effect=_fake_download)
 
     scrape = ScrapeHandler(
         repo=repo,
@@ -140,11 +142,12 @@ async def test_pipeline_copy_mode_keeps_source(repo: Repository, fake_factory, r
 
     async def _fake_download(url: str, dest: Path) -> bool:
         dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_bytes(b"fake image data")
+        dest.write_bytes(image_bytes())
         return True
 
     mock_web_client = AsyncMock()
     mock_web_client.download = AsyncMock(side_effect=_fake_download)
+    mock_web_client.download_image = AsyncMock(side_effect=_fake_download)
 
     scrape = ScrapeHandler(
         repo=repo,
@@ -207,11 +210,12 @@ async def test_dead_poster_url_reordered_before_persist(repo: Repository, fake_f
         if url == "https://img.example.com/p1.jpg":
             return False
         dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_bytes(b"fake image data")
+        dest.write_bytes(image_bytes())
         return True
 
     mock_web_client = AsyncMock()
     mock_web_client.download = AsyncMock(side_effect=_fake_download)
+    mock_web_client.download_image = AsyncMock(side_effect=_fake_download)
 
     handler = ScrapeHandler(
         repo=repo,

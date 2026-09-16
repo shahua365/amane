@@ -846,6 +846,48 @@ export const ApiTypeSchema = {
     title: 'ApiType'
 } as const;
 
+export const ArtworkFallbackRequestSchema = {
+    properties: {
+        kind: {
+            type: 'string',
+            enum: [
+                'poster',
+                'thumb'
+            ],
+            title: 'Kind',
+            default: 'poster'
+        },
+        url: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 2083,
+                    minLength: 1,
+                    format: 'uri'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Url'
+        },
+        path: {
+            anyOf: [
+                {
+                    type: 'string',
+                    minLength: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Path'
+        }
+    },
+    type: 'object',
+    title: 'ArtworkFallbackRequest'
+} as const;
+
 export const Body_install_pluginSchema = {
     properties: {
         file: {
@@ -6105,6 +6147,7 @@ export const SiteOutcomeKindSchema = {
     enum: [
         'ok',
         'failed',
+        'blocked',
         'cache_hit'
     ],
     title: 'SiteOutcomeKind'

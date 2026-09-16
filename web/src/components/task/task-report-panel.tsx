@@ -147,7 +147,7 @@ function OutcomeGroup({ kind, rows }: { kind: SiteOutcomeKind; rows: SiteOutcome
         </Text>
       </Group>
 
-      {kind === "failed" ? (
+      {kind === "failed" || kind === "blocked" ? (
         <Stack gap={4}>
           {rows.map((row) => (
             <FailedSiteRow key={row.site} row={row} />
@@ -191,6 +191,7 @@ function groupByOutcome(
   outcomes: SiteOutcomeRecord[],
 ): { kind: SiteOutcomeKind; rows: SiteOutcomeRecord[] }[] {
   const buckets: Record<SiteOutcomeKind, SiteOutcomeRecord[]> = {
+    blocked: [],
     failed: [],
     ok: [],
     cache_hit: [],
@@ -206,6 +207,8 @@ function groupByOutcome(
 
 function outcomeColor(outcome: SiteOutcomeKind): string {
   switch (outcome) {
+    case "blocked":
+      return "orange";
     case "failed":
       return "red";
     case "ok":
@@ -219,6 +222,7 @@ function outcomeColor(outcome: SiteOutcomeKind): string {
 
 function outcomeIcon(outcome: SiteOutcomeKind) {
   switch (outcome) {
+    case "blocked":
     case "failed":
       return <IconAlertCircle size={12} />;
     case "ok":

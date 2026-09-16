@@ -12,11 +12,14 @@ from amane.enums import MetadataField, SiteName
 from amane.handlers import RefreshHandler, RefreshPayload, ScanMode, ScrapeHandler, ScrapePayload
 from amane.library import LibraryFileKind, LibraryHit
 from amane.parsing import ContentType
+from tests.artwork_support import ImageHTTP, image_bytes
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+    from pathlib import Path
 
     from amane.db.repository import Repository
+    from amane.media import ResourceStore
 
 # --- 辅助类 ---
 
@@ -183,11 +186,14 @@ class TestScrapeHandler:
 
             async def download(self, url, dest, **kwargs) -> bool:
                 dest.parent.mkdir(parents=True, exist_ok=True)
-                Image.new("RGB", self.sizes[url], "blue").save(dest)
+                Image.new("RGB", self.sizes[url], "blue").save(dest, format="JPEG")
                 return True
 
             async def get_filesize(self, url, **kwargs):
                 return None
+
+            async def download_image(self, url, dest) -> bool:
+                return await self.download(url, dest)
 
         h = ScrapeHandler(
             repo=repo,
@@ -209,6 +215,27 @@ class TestScrapeHandler:
 
 
 # --- content_routes 资格真值 + 有序路由 ---
+
+
+@pytest.mark.asyncio
+async def test_forced_rescrape_preserves_manual_cached_image(
+    repo: Repository, resource_store: ResourceStore, tmp_path: Path, image_http: ImageHTTP
+) -> None:
+    source = tmp_path / "manual.png"
+    source.write_bytes(image_bytes())
+    internal = await resource_store.import_image(source)
+    source.unlink()
+    await repo.upsert_metadata(number="TEST-001", title="Old", poster_urls=[internal])
+    config = HotSettings()
+    config.scraping.crop_poster = False
+    handler = ScrapeHandler(
+        repo, FakeFactory({"javdb": MockCrawler()}), resource_store, config, web_client=image_http.client
+    )
+    result = await handler.handle(ScrapePayload(number="TEST-001", use_cache=set()))
+    assert result.success
+    meta = await repo.get_metadata_by_number("TEST-001")
+    assert meta is not None and meta.title == "Mock Title" and meta.poster_urls == [internal]
+    assert image_http.calls == []
 
 
 class RecordingFactory:

@@ -58,7 +58,7 @@ Feed 失败记在源的 `last_error`, 不写入站点 outcome 表.
 
 ### 站点结果单一导出
 
-站点级结果 (成功 / 失败 / 缓存命中) 是任务事实的一手结构化数据. `Recorder.record_site_outcome` 是落盘 API; **来源 fetch 的记账只发生在** `invoke_source` (`observability/source.py`): 有数据 → OK, `None` → `no_usable_metadata`, `SourceError` → 异常上的 `reason` / `http_status` / `detail`, 其它 `Exception` → `unexpected` (继续其它源). 响应结构不符合读模型属 `parse_error`, 必须抛 `SourceError` 并带字段路径; 返回 `None` 会被记成 `no_usable_metadata`, 具体原因随之丢失. 影片 `_fetch_one` 与演员 Handler 均经由它, 爬虫和插件不 import Recorder. 同站点多次上报按语义合并 (outcome 取更差), 已写入的 `reason` / `http_status` / `detail` 不被后续兜底覆盖. `FailureReason` 是封闭枚举 (`net/errors.py`, 与前端 i18n 对应), 自定义句子只写入 `detail`.
+站点级结果 (成功 / 失败 / BLOCKED / 缓存命中) 是任务事实的一手结构化数据. `Recorder.record_site_outcome` 是落盘 API; **来源 fetch 的记账只发生在** `invoke_source` (`observability/source.py`): 有数据 → OK, `None` → `no_usable_metadata`, `SourceError` → 异常详情 (403 / Cloudflare 记 BLOCKED), 其它 `Exception` → `unexpected` (继续其它源). 响应结构不符合读模型属 `parse_error`, 必须抛 `SourceError` 并带字段路径; 返回 `None` 会被记成 `no_usable_metadata`, 具体原因随之丢失. 影片 `_fetch_one` 与演员 Handler 均经由它, 爬虫和插件不 import Recorder. 同站点多次上报按语义合并 (outcome 取更差), 已写入的 `reason` / `http_status` / `detail` 不被后续兜底覆盖. `FailureReason` 是封闭枚举 (`net/errors.py`, 与前端 i18n 对应), 自定义句子只写入 `detail`.
 
 **新增字段时只修改一处**: 扩展 `SiteOutcomeRecord` 字段 → 上游上报点补参数 → summary.json / report / 前端同步获得, 无需跨层拼接字符串. SCRAPE 的 `config.hot.json` 含 `scraping` / `network` / `llm` / `r18` / `plugins`, 插件配置按字段名中的 `api_key` / `token` / `secret` / `password` / `cookie` / `credential` / `dsn` 规则脱敏.
 

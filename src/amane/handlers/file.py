@@ -253,7 +253,14 @@ async def _resolve_local(url: str, store: ResourceStore, client: WebClient) -> P
     return await store.acquire(url, client)
 
 
-async def _acquire_first_local(urls: list[str], store: ResourceStore, client: WebClient) -> Path | None:
+async def _acquire_first_local(
+    urls: list[str], store: ResourceStore, client: WebClient, *, image: bool = False
+) -> Path | None:
+    if image:
+        return (await store.acquire_first_image(urls, client)).path
+    for url in urls:
+        if path := await store.resolve(url):
+            return path
     for url in urls:
         path = await _resolve_local(url, store, client)
         if path:
@@ -342,12 +349,12 @@ async def _download_images_via_store(
     thumb_local = None
     if DownloadableResource.thumb in kinds:
         thumb_urls = metadata.thumb_urls
-        thumb_local = await _acquire_first_local(thumb_urls, store, client) if thumb_urls else None
+        thumb_local = await _acquire_first_local(thumb_urls, store, client, image=True) if thumb_urls else None
 
     poster_local = None
     if DownloadableResource.poster in kinds:
         poster_urls = metadata.poster_urls
-        poster_local = await _acquire_first_local(poster_urls, store, client) if poster_urls else None
+        poster_local = await _acquire_first_local(poster_urls, store, client, image=True) if poster_urls else None
 
     trailer_local = None
     if DownloadableResource.trailer in kinds:

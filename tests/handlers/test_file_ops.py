@@ -26,11 +26,14 @@ class FakeClient:
         if url.endswith(".mp4"):
             dest.write_bytes(b"video")
         else:
-            Image.new("RGB", (800, 538), "blue").save(dest)
+            Image.new("RGB", (800, 538), "blue").save(dest, format="JPEG")
         return True
 
     async def get_filesize(self, url: str, **kwargs):
         return None
+
+    async def download_image(self, url: str, dest: Path) -> bool:
+        return await self.download(url, dest)
 
 
 def _paths(base: Path) -> ResolvedPaths:

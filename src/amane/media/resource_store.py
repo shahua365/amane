@@ -7,11 +7,16 @@
 import asyncio
 import hashlib
 import mimetypes
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
+from urllib.parse import urlsplit
+from uuid import uuid4
+from weakref import WeakValueDictionary
 
 import structlog
+from PIL import Image
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -57,6 +62,7 @@ class ResourceStore:
     def __init__(self, engine: AsyncEngine, base_dir: Path):
         self._engine = engine
         self._base_dir = base_dir
+        self._image_locks: WeakValueDictionary[str, asyncio.Lock] = WeakValueDictionary()
         base_dir.mkdir(parents=True, exist_ok=True)
 
     def _session(self) -> AsyncSession:
@@ -81,6 +87,9 @@ class ResourceStore:
         return self._base_dir.parent
 
     async def resolve(self, url: str) -> Path | None:
+        if url.startswith("/api/resources/"):
+            found = await self.get_by_url_hash(url.rsplit("/", 1)[-1])
+            return found[1] if found else None
         async with self._session() as session:
             stmt = select(Resource).where(Resource.url == url)
             result = await session.exec(stmt)
@@ -97,6 +106,114 @@ class ResourceStore:
                 return None
 
             return full_path
+
+    @staticmethod
+    def _image_mime(path: Path) -> str | None:
+        try:
+            if path.stat().st_size > 32 * 1024**2:
+                return None
+            with Image.open(path) as img:
+                if img.width * img.height > 40_000_000:
+                    return None
+                mime = Image.MIME.get(img.format or "")
+                img.verify()
+            with Image.open(path) as img:
+                img.load()
+            return mime
+        except OSError, ValueError, SyntaxError, Image.DecompressionBombError:
+            return None
+
+    async def acquire_image(self, url: str, client: WebClient) -> Path | None:
+        """仅接受可完整解码的图片; 临时文件校验后原子写入 Resource."""
+        async with self._image_locks.setdefault(url, asyncio.Lock()):
+            cached = await self.resolve(url)
+            if cached and await asyncio.to_thread(self._image_mime, cached):
+                return cached
+            try:
+                parsed = urlsplit(url)
+                valid = parsed.scheme in {"http", "https"} and bool(parsed.hostname)
+            except ValueError:
+                return None
+            if not valid:
+                return None
+            tmp = self._base_dir / f"{uuid4().hex}.tmp"
+            try:
+                if not await client.download_image(url, tmp):
+                    return None
+                mime = await asyncio.to_thread(self._image_mime, tmp)
+                if mime is None:
+                    return None
+                ext = mimetypes.guess_extension(mime) or ".img"
+                dest = self._compute_path(url, ext)
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                tmp.replace(dest)
+                async with self._session() as session:
+                    result = await session.exec(select(Resource).where(Resource.url == url))
+                    record = result.first() or Resource(url=url, file_path=self._relative_path(dest))
+                    record.file_path = self._relative_path(dest)
+                    record.mime_type = mime
+                    record.size = dest.stat().st_size
+                    record.content_hash = await asyncio.to_thread(self._hash_file, dest)
+                    session.add(record)
+                    await session.commit()
+                return dest
+            except OSError:
+                return None
+            finally:
+                tmp.unlink(missing_ok=True)
+
+    async def resolve_image(self, url: str) -> Path | None:
+        cached = await self.resolve(url)
+        return cached if cached and await asyncio.to_thread(self._image_mime, cached) else None
+
+    async def acquire_first_image(self, urls: list[str], client: WebClient) -> AcquireResult:
+        candidates = list(dict.fromkeys(urls))
+        # 全部本地候选优先于任意远端候选, 包含派生和手工导入图片.
+        for url in candidates:
+            cached = await self.resolve_image(url)
+            if cached:
+                return AcquireResult(success=True, path=cached, used_url=url, failed=[])
+        failed: list[str] = []
+        for url in candidates:
+            path = await self.acquire_image(url, client)
+            if path:
+                return AcquireResult(success=True, path=path, used_url=url, failed=failed)
+            failed.append(url)
+        return AcquireResult(success=False, failed=failed)
+
+    async def import_image(self, path: Path) -> str:
+        """调用方校验本地路径边界; 复制后校验, 记录只保存内容散列."""
+        tmp = self._base_dir / f"{uuid4().hex}.tmp"
+        try:
+            await asyncio.to_thread(self._copy_local_image, path, tmp)
+            mime = await asyncio.to_thread(self._image_mime, tmp)
+            if mime is None:
+                raise ValueError("图片无法完整解码")
+            digest = await asyncio.to_thread(self._hash_file, tmp)
+
+            async def producer(dest: Path) -> bool:
+                await asyncio.to_thread(shutil.copyfile, tmp, dest)
+                return True
+
+            async with self._image_locks.setdefault(f"manual:{digest}", asyncio.Lock()):
+                record = await self.acquire_derived(
+                    f"manual:{digest}", "import", "", producer, ext=mimetypes.guess_extension(mime) or ".img"
+                )
+            if record is None:
+                raise ValueError("图片缓存失败")
+            return f"/api/resources/{self.url_hash(record.url)}"
+        finally:
+            tmp.unlink(missing_ok=True)
+
+    @staticmethod
+    def _copy_local_image(src: Path, dest: Path) -> None:
+        if not src.is_file():
+            raise ValueError("图片路径必须是文件")
+        with src.open("rb") as stream:
+            content = stream.read(32 * 1024**2 + 1)
+        if len(content) > 32 * 1024**2:
+            raise ValueError("图片文件超过 32 MiB")
+        dest.write_bytes(content)
 
     async def acquire(self, url: str, client: WebClient) -> Path | None:
         # 缓存命中且文件存在则直出.

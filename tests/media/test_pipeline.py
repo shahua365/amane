@@ -33,11 +33,14 @@ class FakeClient:
         if size is None:
             dest.write_bytes(b"video-bytes")  # trailer 等非图
             return True
-        Image.new("RGB", size, "blue").save(dest)
+        Image.new("RGB", size, "blue").save(dest, format="JPEG")
         return True
 
     async def get_filesize(self, url: str, **kwargs) -> int | None:
         return None
+
+    async def download_image(self, url: str, dest: Path) -> bool:
+        return await self.download(url, dest)
 
 
 @pytest.mark.asyncio
@@ -300,4 +303,4 @@ async def test_cache_hit_counts_as_success(resource_store: ResourceStore, tmp_pa
     )
     assert out.poster_urls == ["https://s/live.jpg", "https://s/dead.jpg"]
     assert "https://s/live.jpg" not in client.downloaded  # 缓存命中, 无网络请求
-    assert "https://s/dead.jpg" in client.downloaded
+    assert "https://s/dead.jpg" not in client.downloaded

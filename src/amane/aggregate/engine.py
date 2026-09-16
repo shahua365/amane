@@ -117,13 +117,15 @@ async def aggregate(
     cache: Mapping[str, dict] | None = None,
     on_progress: ProgressCallback | None = None,
     multi_lang_sites: frozenset[SourceName] = MULTI_LANGUAGE_SOURCE_IDS,
+    *,
+    defer_artwork: bool = False,
 ) -> AggregateResult:
     fl = field_language or {}
     snapshots = cache or {}
 
     graph = build_graph(field_priority, fl, multi_lang_sites=multi_lang_sites)
     current().debug("fetch graph built", graph=str(graph))
-    state = await execute_graph(graph, crawlers, query, snapshots, on_progress=on_progress)
+    state = await execute_graph(graph, crawlers, query, snapshots, on_progress=on_progress, defer_artwork=defer_artwork)
 
     if not state.fetched:
         current().warning("no data fetched from any source")
@@ -174,6 +176,8 @@ async def execute_graph(
     query: SearchQuery,
     db_cache: Mapping[SourceKey, dict] | None = None,
     on_progress: ProgressCallback | None = None,
+    *,
+    defer_artwork: bool = False,
 ) -> ExecutionState:
     """按波次请求; 标量沿 fallback 当场短路. URL / 评分 / 剧照在全部请求结束后按字段链拼接."""
     snapshots = db_cache or {}
@@ -182,6 +186,8 @@ async def execute_graph(
 
     # 标量满足后移除; 聚合类字段始终保留.
     unsatisfied: set[MetadataField] = set(ALL_FIELDS)
+    if defer_artwork:
+        unsatisfied.difference_update({MetadataField.POSTER_URLS, MetadataField.THUMB_URLS})
 
     # 禁用插件 / 未安装来源 / 构造失败不在 crawlers 中: 标成已处理空结果,
     # 不写入 failed / sites_queried, 也不调用 invoke_source (否则 KeyError → unexpected).

@@ -77,6 +77,13 @@ class SourceError(Exception):
         self.url = url
         super().__init__(detail or reason)
 
+    @property
+    def blocked(self) -> bool:
+        return self.http_status == 403 or self.reason in {
+            FailureReason.CLOUDFLARE_CHALLENGE,
+            FailureReason.CLOUDFLARE_BLOCKED,
+        }
+
 
 class RequestError(SourceError):
     def __init__(self, url: str, failure: RequestFailure | str | None = None) -> None:

@@ -15,7 +15,7 @@ async def invoke_source[T](source_id: str, fetch: Callable[[], Awaitable[T | Non
     except SourceError as exc:
         rec.record_site_outcome(
             site=source_id,
-            outcome=SiteOutcomeKind.FAILED,
+            outcome=SiteOutcomeKind.BLOCKED if exc.blocked else SiteOutcomeKind.FAILED,
             reason=exc.reason,
             http_status=exc.http_status,
             detail=exc.detail,

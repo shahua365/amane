@@ -20,6 +20,7 @@ from .images import (
     should_crop_poster,
     validate_crop_box,
 )
+from .resource_store import AcquireResult
 
 if TYPE_CHECKING:
     from ..config import HotSettings, SrConfig
@@ -91,6 +92,7 @@ async def materialize_images(
     data_dir: Path,
     *,
     extrafanart_urls: dict[str, list[str]] | None = None,
+    artwork_resolved: bool = False,
 ) -> MaterializedImages:
     """仅下载集合内的类型; 未选中的保留聚合 URL.
 
@@ -99,40 +101,42 @@ async def materialize_images(
     """
     kinds = set(config.scraping.download_resources)
 
+    async def select_image(urls: list[str]) -> AcquireResult:
+        if not artwork_resolved:
+            return await store.acquire_first_image(urls, client)
+        for url in urls:
+            if local := await store.resolve_image(url):
+                return AcquireResult(success=True, path=local, used_url=url)
+        return AcquireResult(success=False)
+
     # 下载 thumb.
     thumb_ok: set[str] = set()
     thumb_local: Path | None = None
     thumb_src: str | None = None
     if DownloadableResource.thumb in kinds:
-        for url in thumb_urls:
-            local = await store.acquire(url, client)
-            if local:
-                thumb_ok.add(url)
-                if thumb_local is None:
-                    thumb_local, thumb_src = local, url
-                    res = await store.get_by_url(url)
-                    if res:
-                        await _maybe_upscale(store, res, config, data_dir)
+        selected = await select_image(thumb_urls)
+        if selected.used_url and selected.path:
+            thumb_ok.add(selected.used_url)
+            thumb_local, thumb_src = selected.path, selected.used_url
+            res = await store.get_by_url(selected.used_url)
+            if res:
+                await _maybe_upscale(store, res, config, data_dir)
 
     # 下载 poster; 候选偏矮则从 thumb 裁剪.
     poster_ok: set[str] = set()
     poster_candidate_local: Path | None = None
     result_poster_urls = list(poster_urls)
     if DownloadableResource.poster in kinds:
-        for url in poster_urls:
-            local = await store.acquire(url, client)
-            if local:
-                poster_ok.add(url)
-                if poster_candidate_local is None:
-                    poster_candidate_local = local
+        selected = await select_image(poster_urls)
+        if selected.used_url and selected.path:
+            poster_ok.add(selected.used_url)
+            poster_candidate_local = selected.path
 
         # 裁剪需要 thumb 本地文件; 若未选 thumb 下载, 为裁剪临时 acquire 首个 thumb.
         if thumb_local is None and thumb_urls and config.scraping.crop_poster:
-            for url in thumb_urls:
-                local = await store.acquire(url, client)
-                if local:
-                    thumb_local, thumb_src = local, url
-                    break
+            selected = await select_image(thumb_urls)
+            if selected.used_url and selected.path:
+                thumb_local, thumb_src = selected.path, selected.used_url
 
         thumb_size = probe_size(thumb_local) if thumb_local else None
         cand_size = probe_size(poster_candidate_local) if poster_candidate_local else None
@@ -159,6 +163,8 @@ async def materialize_images(
             result_poster_urls = _success_first(poster_urls, poster_ok)
             if poster_candidate_local:
                 for url in poster_urls:
+                    if url not in poster_ok:
+                        continue
                     res = await store.get_by_url(url)
                     if res:
                         await _maybe_upscale(store, res, config, data_dir)

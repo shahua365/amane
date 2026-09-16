@@ -457,6 +457,24 @@ export type AgentTraceResponse = {
 export type ApiType = 'chat' | 'response' | 'anthropic';
 
 /**
+ * ArtworkFallbackRequest
+ */
+export type ArtworkFallbackRequest = {
+    /**
+     * Kind
+     */
+    kind?: 'poster' | 'thumb';
+    /**
+     * Url
+     */
+    url?: string | null;
+    /**
+     * Path
+     */
+    path?: string | null;
+};
+
+/**
  * Body_install_plugin
  */
 export type BodyInstallPlugin = {
@@ -2994,7 +3012,7 @@ export type SiteName = 'airav' | 'avsox' | 'dahlia' | 'dmm' | 'faleno' | 'fc2' |
 /**
  * SiteOutcomeKind
  */
-export type SiteOutcomeKind = 'ok' | 'failed' | 'cache_hit';
+export type SiteOutcomeKind = 'ok' | 'failed' | 'blocked' | 'cache_hit';
 
 /**
  * SiteOutcomeRecord
@@ -3877,6 +3895,36 @@ export type UpdateMediaResponses = {
 };
 
 export type UpdateMediaResponse = UpdateMediaResponses[keyof UpdateMediaResponses];
+
+export type ArtworkFallbackData = {
+    body: ArtworkFallbackRequest;
+    path: {
+        /**
+         * Metadata Id
+         */
+        metadata_id: number;
+    };
+    query?: never;
+    url: '/api/metadata/{metadata_id}/artwork-fallback';
+};
+
+export type ArtworkFallbackErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ArtworkFallbackError = ArtworkFallbackErrors[keyof ArtworkFallbackErrors];
+
+export type ArtworkFallbackResponses = {
+    /**
+     * Successful Response
+     */
+    200: MetadataResponse;
+};
+
+export type ArtworkFallbackResponse = ArtworkFallbackResponses[keyof ArtworkFallbackResponses];
 
 export type GetMetadataSchemaData = {
     body?: never;

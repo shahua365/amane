@@ -8,6 +8,46 @@ from curl_cffi.requests import Response
 
 from amane.net.errors import RequestError
 from amane.net.http import RateLimiters, WebClient, _retry_after
+from tests.artwork_support import ImageHTTP
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("status", "body", "headers"),
+    [
+        (403, b"Forbidden", {}),
+        (200, b"Just a moment cloudflare", {}),
+        (503, b"Just a moment cloudflare", {}),
+        (200, b"challenge", {"cf-mitigated": "challenge"}),
+        (200, b"<html>cf-error ray-id</html>", {}),
+    ],
+)
+async def test_blocked_host_no_retry_or_redirect_reentry(
+    image_http: ImageHTTP, status: int, body: bytes, headers: dict[str, str]
+) -> None:
+    origin, target = "https://origin.example/page", "https://blocked.example/challenge"
+    image_http.responses["GET", origin] = 302, b"", {"Location": target}
+    image_http.responses["GET", target] = status, body, headers
+    with pytest.raises(RequestError) as err:
+        await image_http.client.request("GET", origin)
+    assert err.value.blocked
+    for url in [origin, "https://origin.example/another", target, "https://blocked.example/another"]:
+        with pytest.raises(RequestError):
+            await image_http.client.request("GET", url)
+    assert image_http.calls == [("GET", origin), ("GET", target)]
+
+
+@pytest.mark.asyncio
+async def test_queued_request_stops_after_block(image_http: ImageHTTP) -> None:
+    image_http.client._limiters.set_rate("blocked.example", 100)
+    for n in range(3):
+        image_http.responses["GET", f"https://blocked.example/{n}"] = 403, b"", {}
+    results = await asyncio.gather(
+        *(image_http.client.request("GET", f"https://blocked.example/{n}") for n in range(3)),
+        return_exceptions=True,
+    )
+    assert all(isinstance(result, RequestError) and result.blocked for result in results)
+    assert len(image_http.calls) == 1
 
 
 @pytest.mark.parametrize(

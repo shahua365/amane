@@ -57,9 +57,9 @@ CrawlerFactory (缓存实例)
 `WebClient` (`net/http.py`) 是唯一出站 HTTP 通道: 失败抛出 `RequestError` (`SourceError` 子类, `failure` 位于异常上), `ok_statuses` (如 RSS 304) 仍算成功. `HttpClient` (`crawlers/http.py`) 是其薄封装 (`get_rendered` / 浏览器), 爬虫与插件均经由它.
 
 - HTML 页用 `get_html`: `get_text` + `classify_block`, 命中拦截 / 空页抛出 `SourceError`.
-- JSON API 用 `get_json` / `post_json`, 不执行 HTML 启发式; `post_json` 载荷可以是 object 或 array (Yii 式 RPC).
+- JSON API 用 `get_json` / `post_json`; Cloudflare 响应统一由 WebClient 拒绝.
 - `download` / `ResourceStore.acquire` 是机会主义的: 调用方 `except RequestError: return None` / 返回 `bool`, 不经由第二套错误通道.
-- 多 URL 试探可在子类 `except RequestError: continue`; 一次成功响应都没有则把最后一次异常冒出去, 不允许将异常吞没为裸 `None`.
+- 多 URL 试探失败须上报最后一次异常, 不允许吞没为裸 `None`. HTTP 403 / Cloudflare 将主机标记 BLOCKED; 当前 WebClient 生命周期内, 后续请求、排队与重定向均停止, 不自动恢复或执行验证绕过. 客户端重建后重新判定.
 
 ### 拦截判定
 

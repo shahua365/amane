@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, HttpUrl, model_validator
 
 from ...db import Metadata
 from ...enums import ActorGender
@@ -95,6 +95,18 @@ class MetadataDetailResponse(BaseModel):
 
 class MergeRequest(BaseModel):
     selections: dict[str, str] = Field(description="field_name -> source_key 映射")
+
+
+class ArtworkFallbackRequest(BaseModel):
+    kind: Literal["poster", "thumb"] = "poster"
+    url: HttpUrl | None = None
+    path: str | None = Field(default=None, min_length=1)
+
+    @model_validator(mode="after")
+    def validate_source(self) -> ArtworkFallbackRequest:
+        if (self.url is None) == (self.path is None):
+            raise ValueError("必须指定 url 或 path 其中一项")
+        return self
 
 
 class CropPosterRequest(BaseModel):

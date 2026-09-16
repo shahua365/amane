@@ -48,6 +48,7 @@ async def test_invoke_source_source_error(rec: Recorder):
     assert await invoke_source("javbus", fetch) is None
     out = rec.summary.outcomes["javbus"]
     assert out.reason == FailureReason.CLOUDFLARE_CHALLENGE
+    assert out.outcome == SiteOutcomeKind.BLOCKED
     assert out.http_status == 403
     assert out.detail == "cf"
 

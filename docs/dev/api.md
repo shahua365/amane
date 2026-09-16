@@ -43,6 +43,7 @@ OpenAPI 列出参数, 不表达组合语义:
 - metadata 同 kind 的筛选: 关联类 AND / 标量类 OR; 跨 kind 始终 AND. `saved_query_id` 与其它筛选项 AND; `data` 实体不可作列表筛选 (400). 关联文件相位筛选与 `has_files` 一样 AND (布尔项 True = 至少一份具备, False = 没有任何一份具备), 列表项带聚合 `file_phase`. 见 [data-model.md](data-model.md) / [agent.md](agent.md).
 - GET `/media` 的相位 query 作用在单行列上: 布尔 False 是 `col = false`, 不是 metadata 那种 NOT EXISTS. 未知 `definition` → 422; 相位列不纳入 PATCH.
 - 裁切海报基准是 `thumb_urls[0]` **当前本地文件**像素, 不修改库路径海报; locator 见 [data-model.md](data-model.md).
+- `src/amane/api/routes/metadata.py::artwork_fallback` 仅在现有图片候选不可用时导入手工 URL / 本地文件; 本地路径遵守 safe_dirs, 复制并校验后缓存, 只更新对应图片字段, 不触发刮削或整理.
 - 注册顺序有约束的三处: `/facets/{kind}/rules` 先于 `/{facet_id}`; `/plugins/reload` 先于 `/plugins/{plugin_id}` (否则 `reload` 被当成插件 ID); `/tasks/batch` 与 `/tasks/worker*` 先于 `/{task_id}` (否则被当成非法整数 id); `/feeds/items` 先于 `/{feed_id}`; `/playback/sources` 先于 `/{source_id}`.
 - 播放端点的形状 (流的一行、`available` / `key` / `detail` 的三种组合、Range、HLS 分片与字幕路径、404 / 502 语义) 见 [plugins.md](plugins.md)「播放源」.
 - 评论正文先去除首尾空白再校验长度, 全空白与超过 10000 字符均为 422. `updated_at` 晚于 `created_at` 表示正文被编辑过: PATCH 提交与库中一致的正文不写库, 也不刷新 `updated_at`, 前端据此判定「已编辑」; 排序由前端在详情响应上完成, 端点不提供 order 参数.

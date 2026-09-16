@@ -104,10 +104,11 @@ handler 之间复用的阶段逻辑, 不是一条可跳步的总管线:
 
 ## 刮削期资源物化
 
-`ScrapeHandler` 在聚合后、`upsert_metadata` 前调用 `materialize_images` (`src/amane/media/pipeline.py`) — 二进制写入 Resource 目录的主路径, 与是否整理无关:
+`ScrapeHandler` 在聚合后、写库前调用 `src/amane/media/artwork.py::rescue_artwork`, 再经 `src/amane/media/pipeline.py::materialize_images` 裁剪 / 超分, 与整理独立:
 
 - **`scraping.download_resources`** 控制本步下载哪些类型 (thumb / poster / extrafanart / trailer).
-- **URL 重排契约**: 被下载类型的 URL 列表按本次下载成功 (含缓存命中) 稳定分区 — 成功者保序前置, 失败者保序沉底. 死 URL 不再占据首位, 但保留在尾部, 来源恢复后下次物化可重新尝试. 未选中下载的类型无成败信息, 保持聚合优先级原序; extrafanart 为站点分组 dict, 不重排. `raw` 快照保持站点原始数据.
+- **图片与标量分离**: metadata 已取得的图片 URL 全部作为候选; 图片不可用时按各自字段链查询尚未请求的合资格来源, 只补图片, 不写入补图来源的标量或 raw. 原 metadata 快照仍按 `use_cache` 复用.
+- **选源与缓存**: poster / thumb 先检查全部本地候选, 再按优先级 HEAD / GET, 完整解码成功即原子缓存并前置 URL; 同次失败 URL 不重复请求. 其余候选保留, 后处理不再次请求失败项. 重新刮削保留可用本地图片, 包括手工导入; ORGANIZE 同样先检查全部本地候选.
 - 裁剪海报 → 按 `scraping.poster_ratio` 从 thumb 右侧裁切; 超分就地覆盖. 失败不阻断刮削.
 
 手动裁切复用同一派生通道 (`op=crop`, `args=box:…`), 见 [data-model.md](data-model.md).

@@ -8,8 +8,9 @@ from ..crawlers.base import Crawler
 from ..crawlers.models import SearchQuery
 from ..crawlers.site_roles import MULTI_LANGUAGE_SOURCE_IDS
 from ..db.models import TaskType
-from ..enums import ActorGender, MetadataField
+from ..enums import ActorGender, DownloadableResource, MetadataField
 from ..media import materialize_images
+from ..media.artwork import rescue_artwork
 from ..observability import current
 from ._common import ensure_oshash, finalize_media_file
 from .models import ActorScrapePayload, CacheKind, ScrapePayload, ScrapeResult
@@ -66,8 +67,8 @@ class ScrapeHandler(TaskHandler[ScrapePayload, ScrapeResult]):
 
         # 启用 metadata 缓存时读取 raw 快照.
         use_metadata_cache = CacheKind.metadata in payload.use_cache
-        db_data = await self._repo.get_metadata_by_number(payload.number) if use_metadata_cache else None
-        if db_data is not None and db_data.raw:
+        db_data = await self._repo.get_metadata_by_number(payload.number)
+        if use_metadata_cache and db_data is not None and db_data.raw:
             rec.write_raw_cache(db_data.raw)
 
         # 校验 content_type 路由; 无资格站点则失败.
@@ -116,9 +117,10 @@ class ScrapeHandler(TaskHandler[ScrapePayload, ScrapeResult]):
             crawlers,
             field_priority,
             field_language,
-            db_data.raw if db_data else None,
+            db_data.raw if use_metadata_cache and db_data else None,
             on_progress=_on_fetch_progress,
             multi_lang_sites=self._multi_language_sources,
+            defer_artwork=self._web_client is not None,
         )
 
         # 站点结果已由引擎 _fetch_one 逐条上报到 summary.outcomes; 这里只记录调度顺序.
@@ -141,21 +143,47 @@ class ScrapeHandler(TaskHandler[ScrapePayload, ScrapeResult]):
         trailer_out = result.metadata.trailer_urls
         if self._web_client is not None:
             try:
+                if db_data:
+                    for url in db_data.poster_urls:
+                        if await self._resource_store.resolve_image(url):
+                            result.metadata.poster_urls.append(url)
+                    for url in db_data.thumb_urls:
+                        if await self._resource_store.resolve_image(url):
+                            result.metadata.thumb_urls.append(url)
+                artwork = await rescue_artwork(
+                    q,
+                    result,
+                    crawlers,
+                    field_priority,
+                    self._resource_store,
+                    self._web_client,
+                    cache=db_data.raw if use_metadata_cache and db_data else None,
+                    poster=DownloadableResource.poster in self._config.scraping.download_resources,
+                    thumb=DownloadableResource.thumb in self._config.scraping.download_resources
+                    or (
+                        DownloadableResource.poster in self._config.scraping.download_resources
+                        and self._config.scraping.crop_poster
+                    ),
+                )
+                poster_out, thumb_out = artwork.poster_urls, artwork.thumb_urls
                 materialized = await materialize_images(
-                    result.metadata.poster_urls,
-                    result.metadata.thumb_urls,
+                    poster_out,
+                    thumb_out,
                     result.metadata.trailer_urls,
                     self._resource_store,
                     self._web_client,
                     self._config,
                     self._resource_store.data_dir,
                     extrafanart_urls=result.metadata.extrafanart_urls,
+                    artwork_resolved=True,
                 )
                 poster_out = materialized.poster_urls
                 thumb_out = materialized.thumb_urls
                 trailer_out = materialized.trailer_urls
             except Exception:
                 current().warning("image materialization failed, keeping raw urls", number=payload.number)
+
+        rec.update_summary(sites_queried=list(result.sites_queried))
 
         await self.report_progress(len(SCALAR_FIELDS) + 1, progress_total, "materialize")
 

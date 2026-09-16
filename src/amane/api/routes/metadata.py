@@ -32,6 +32,8 @@ from ..models import (
     PartialMetadata,
     UserTagResponse,
 )
+from ..models.metadata import ArtworkFallbackRequest
+from ..support.path_validation import validate_image_path
 from .agent import resolve_saved_query_id_subquery
 
 if TYPE_CHECKING:
@@ -40,6 +42,40 @@ if TYPE_CHECKING:
 logger = structlog.get_logger()
 
 router = APIRouter(prefix="/metadata", tags=["metadata"])
+
+
+@router.post("/{metadata_id}/artwork-fallback")
+async def artwork_fallback(
+    metadata_id: int, req: ArtworkFallbackRequest, repo: RepoDep, runtime: RuntimeDep
+) -> MetadataResponse:
+    """现有候选全部不可用时导入手工图片, 不重新刮削或修改标量字段."""
+    metadata = await repo.get_metadata(metadata_id)
+    if metadata is None:
+        raise HTTPException(status_code=404, detail="Metadata not found")
+    store = runtime.resource_store
+    urls = metadata.poster_urls if req.kind == "poster" else metadata.thumb_urls
+    selected = await store.acquire_first_image(urls, runtime.web_client)
+    chosen = selected.used_url
+    if not chosen:
+        if req.path is not None:
+            path = await validate_image_path(req.path, runtime.safe_dirs)
+            try:
+                chosen = await store.import_image(path)
+            except (ValueError, OSError) as exc:
+                raise HTTPException(status_code=400, detail="图片无法导入或完整解码") from exc
+        elif req.url is not None:
+            chosen = str(req.url)
+            if await store.acquire_image(chosen, runtime.web_client) is None:
+                raise HTTPException(status_code=422, detail="图片无法获取或完整解码")
+    assert chosen is not None
+    updated_urls = list(dict.fromkeys([chosen, *urls]))
+    if req.kind == "poster":
+        updated = await repo.update_metadata(metadata_id, poster_urls=updated_urls)
+    else:
+        updated = await repo.update_metadata(metadata_id, thumb_urls=updated_urls)
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Metadata not found")
+    return to_resp(MetadataResponse, updated)
 
 
 def _file_phase_resp(summary: ParsedFilePhase) -> FilePhaseSummary:

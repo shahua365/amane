@@ -71,6 +71,21 @@ async def validate_directory_path(raw_path: str, safe_dirs: list[Path] | None) -
         raise _http_from_path_error(exc) from exc
 
 
+@in_thread
+def check_image_path(raw_path: str, safe_dirs: list[Path] | None) -> Path:
+    resolved = _resolve_under_safe_dirs(raw_path, safe_dirs)
+    if not resolved.is_file():
+        raise ValueError("图片路径必须是文件")
+    return resolved
+
+
+async def validate_image_path(raw_path: str, safe_dirs: list[Path] | None) -> Path:
+    try:
+        return await check_image_path(raw_path, safe_dirs)
+    except ValueError as exc:
+        raise _http_from_path_error(exc) from exc
+
+
 async def validate_plugin_install_path(raw_path: str, safe_dirs: list[Path] | None) -> Path:
     try:
         return await check_plugin_install_path(raw_path, safe_dirs)
