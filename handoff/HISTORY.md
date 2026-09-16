@@ -15,4 +15,5 @@
 - 沿用指定会话的 FC2CMADB/FD2PPV 实现和年龄验证修复, 适配当前 v0.14.0 架构.
 - 复用官方 FC2, 增加有实际 HTML 依据的 JavArchive; 强化限速、查询规范化、补空和图片缓存复用.
 - 受限或未确认站点保留真实验证边界; 完整审计见 [报告](reports/fc2-audit-20260915.md).
-- 本机全量测试仅保留四项 Windows 符号链接环境失败; CI 和 NAS 隔离测试结果待后续验证记录.
+- 本机全量测试保留四项 Windows 符号链接环境失败; 最终代码 3bbdc5a 的 GitHub Ubuntu / Windows / Docker CI 全通过.
+- NAS 首轮三样本与最终镜像单样本成功入隔离库、缓存图片; FD2PPV 403 后停止. 生产 v0.11.0、配置、Compose 未改; 备份和回滚见验收报告.
