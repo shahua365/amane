@@ -331,7 +331,7 @@ class ScrapingConfig(BaseModel):
             site_config = dict(site_config)
             legacy = site_config.pop("fc2ppvdb", None)
             if "fc2cmadb" not in site_config and legacy is not None:
-                site_config["fc2cmadb"] = legacy
+                site_config["fc2cmadb"] = {**legacy, "cookie": {}} if isinstance(legacy, dict) else legacy
             current = site_config.get("fc2cmadb")
             if isinstance(current, dict):
                 current = dict(current)

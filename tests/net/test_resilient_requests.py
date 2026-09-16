@@ -86,3 +86,25 @@ async def test_retired_redirect_never_sent() -> None:
         assert client._session.request.call_count == 1
     finally:
         await client.close()
+
+
+@pytest.mark.asyncio
+async def test_queued_worker_respects_new_cooldown() -> None:
+    client = WebClient(limiters=RateLimiters(default_rate=25), max_retries=1, request_jitter=0, host_concurrency=3)
+
+    async def send(*args: object, **kwargs: object) -> Response:
+        await asyncio.sleep(0.01)
+        response = Response()
+        response.status_code = 429
+        response.headers["Retry-After"] = "120"
+        return response
+
+    client._session.request = AsyncMock(side_effect=send)
+    try:
+        results = await asyncio.gather(
+            *(client.request("GET", f"https://example.com/{n}") for n in range(3)), return_exceptions=True
+        )
+        assert all(isinstance(result, RequestError) and result.http_status == 429 for result in results)
+        assert client._session.request.call_count == 1
+    finally:
+        await client.close()

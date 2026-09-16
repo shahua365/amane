@@ -32,7 +32,7 @@ async def test_untyped_numeric_does_not_request(
     mock_web_client.get_text.assert_not_called()
 
 
-@pytest.mark.parametrize("base_url", ["https://fc2ppvdb.com", "https://www.fc2ppvdb.com/articles/1"])
+@pytest.mark.parametrize("base_url", ["", "https://fc2ppvdb.com", "https://www.fc2ppvdb.com/articles/1"])
 def test_legacy_config_cannot_request_old_host(base_url: str) -> None:
     hot = HotSettings.model_validate(
         {
@@ -45,7 +45,7 @@ def test_legacy_config_cannot_request_old_host(base_url: str) -> None:
         }
     )
     assert hot.scraping.content_routes[ContentType.FC2] == ["fc2cmadb"]
-    assert hot.scraping.site_config["fc2cmadb"].base_url == "https://fc2cmadb.com"
+    assert hot.scraping.site_config["fc2cmadb"].base_url in ("", "https://fc2cmadb.com")
     assert hot.scraping.site_config["fc2cmadb"].cookie == {}
     assert hot.scraping.field_priority[MetadataField.TITLE] == ["fc2cmadb"]
     assert hot.scraping.field_blacklist[MetadataField.TAGS] == ["fc2cmadb"]

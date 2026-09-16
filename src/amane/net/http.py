@@ -328,6 +328,10 @@ class WebClient:
                 if self._request_jitter:
                     await asyncio.sleep(random.uniform(0, 2 * self._request_jitter) * limiter.time_period)
                 await limiter.acquire()
+                if self._host_cooldown.get(host, 0) > time.monotonic():
+                    raise RequestError(
+                        url, RequestFailure(kind=FailureKind.HTTP_STATUS, status=429, message="host cooling down")
+                    )
                 resp = await self._session.request(
                     method,
                     url,
