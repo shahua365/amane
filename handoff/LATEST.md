@@ -6,7 +6,7 @@
 
 - Fork: `shahua365/amane`; 工作分支 `codex/fc2-multisource-scrapers`.
 - 通用图片改造代码: `05d27836cbc9938ebd1657d28c4dba47da4270ef`; 后续交接提交只修改文档.
-- `main` 保持 `5de9f9ae463169942f1ed45314989a2033ee835c`, 本轮未修改或推送 main; 未部署 NAS 或操作生产数据.
+- NAS 已部署 `00527a0ef3510b795d4f8c9bd2cdc5983d0e8ed5`, 版本 v0.14.0; `main` 保持 `5de9f9ae463169942f1ed45314989a2033ee835c`.
 
 ## 通用图片回退
 
@@ -22,12 +22,19 @@
 - PASS: Ruff lint / format、Pyright、ty; OpenAPI / TS client 已生成, 前端 check 与 production build 通过.
 - PARTIAL: 本机全量 Python 2557 passed、42 skipped、4 failed; 四项失败均为既有 Windows 符号链接权限 WinError 1314. 随后补充手工缓存保留和非法 URL 测试, 相关测试组分别 60 passed 与 32 passed. 未删除或放宽原有测试断言.
 - PASS: [GitHub CI #4](https://github.com/shahua365/amane/actions/runs/35196230706) 全部通过, 包含 Ubuntu `just ci`、Windows `just ci-windows` 与 Docker build. Ubuntu 2587 passed、18 skipped; Windows 2563 passed、42 skipped.
-- PASS: Docker 镜像 `amane-ci:05d27836cbc9938ebd1657d28c4dba47da4270ef`, image ID `sha256:f2467527769da3db19db7e8a835dd98cdec9308a45b388b6b6d0d3e23db1fbbd`; 仅在 CI 构建, 未发布镜像或部署生产.
+- PASS: CI Docker 镜像 `amane-ci:05d27836cbc9938ebd1657d28c4dba47da4270ef`, image ID `sha256:f2467527769da3db19db7e8a835dd98cdec9308a45b388b6b6d0d3e23db1fbbd`; NAS 独立构建结果见下文.
 - VERIFIED: 合成图片覆盖候选回退、完整解码、缓存写入、缓存优先整理、并发去重、手工文件与 URL、标量不覆盖、字段独立优先级、403 / challenge 停止请求和重定向传播.
-- NOT TESTED: 本轮未搜索、查看、访问或新增内容来源, 未针对具体影片编写逻辑, 未进行 NAS 实测或生产部署. 公网站点可用性和具体影片封面均不属于本轮验收.
+- NOT TESTED: 本轮未搜索、查看、访问或新增内容来源, 未针对具体影片编写逻辑. 公网站点可用性和具体影片封面均不属于本轮验收.
+
+## NAS 部署验收
+
+- 镜像 `amane:artwork-00527a0`, ID `sha256:15a0f519233f469937dc857aa0eb3247c03a6e28675cc300add8c0efde5c4241`, revision label 对应部署 SHA; NAS 构建完成后切换生产 `Amane`.
+- 禁网、无媒体挂载的数据库副本完成迁移和合成图片缓存验证. 生产 revision 从 `668e214b1a76` 升至 `022f8eb0d22f`; quick_check 为 ok, 外键错误 0; metadata 737、media_files 784、resources 8918、tasks 15644、libraries 2 均保持数量.
+- 生产健康接口与 Web 返回 200, 版本 v0.14.0; 容器 healthy、重启计数 0、启动错误计数 0. 配置与 token 字节一致, 媒体挂载、AMANE 环境变量、运行身份及重启策略保持现场状态.
+- 两个媒体库 automation 暂停为 NONE, 两个定时任务暂停, 无待执行任务或订阅; 遵守本轮不访问内容来源的范围. 原自动化设置保存在停机备份, 后续恢复须明确授权.
 
 ## 运维与历史边界
 
-无需数据库迁移. 本轮只推送任务分支, 没有修改生产配置、数据库或媒体文件, 因此无需生产回滚. 若后续撤销代码改造, 对功能提交执行独立 revert, 不删除已缓存资源.
+图片改造未新增迁移, 但 NAS v0.11.0 升至 v0.14.0 包含上游迁移. 项目 `backups/artwork-deploy-20260917` 保存现场容器参数、部署清单和 rollback.py; 数据目录同名备份的 final 子目录保存停机一致性数据库、配置、token 和自动化设置. 均仅保存 NAS 本地. 原镜像保留; 回滚脚本已检查语法但未执行, 将停止新服务、保留失败数据库文件并恢复旧库、旧镜像及原自动化设置. 禁止仅切换旧镜像而继续使用已升级数据库.
 
 此前 FC2 多源工作和 NAS 验收仅代表对应日期的旧代码结果, 见 [来源审计](reports/fc2-audit-20260915.md)、[NAS 验收](reports/fc2-nas-20260916.md) 与 [历史](HISTORY.md). FD2PPV crawler 保留; 本轮没有实现任何验证码、Cloudflare 验证绕过、指纹伪造或 clearance 获取.
