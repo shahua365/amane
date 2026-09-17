@@ -158,7 +158,7 @@ async def start_app(config: ConfigManager | None = None) -> AppSession:
         logger.info("safe dirs for file browser", dirs=[str(d) for d in safe_dirs])
     api_token = resolve_api_token(cold.token, cold.data_dir)
     if api_token is not None:
-        logger.info("api token auth enabled", token=api_token)
+        logger.info("api token auth enabled")
 
     handlers = build_handlers(
         repo,
