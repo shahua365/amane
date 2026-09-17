@@ -17,3 +17,10 @@
 - 受限或未确认站点保留真实验证边界; 完整审计见 [报告](reports/fc2-audit-20260915.md).
 - 本机全量测试保留四项 Windows 符号链接环境失败; 最终代码 3bbdc5a 的 GitHub Ubuntu / Windows / Docker CI 全通过.
 - NAS 首轮三样本与最终镜像单样本成功入隔离库、缓存图片; FD2PPV 403 后停止. 生产 v0.11.0、配置、Compose 未改; 备份和回滚见验收报告.
+
+## 2026-09-17 — 通用 artwork 回退与缓存
+
+- 代码 `05d27836cbc9938ebd1657d28c4dba47da4270ef` 将补图与 metadata 标量聚合分离, 复用当前注册来源, 不新增内容站点或影片专用逻辑.
+- 图片完整解码后原子缓存, organize 优先本地; 增加手工 URL / safe_dirs 内图片文件的最终回退 API.
+- 403 / Cloudflare 在当前 HTTP 客户端生命周期内标记 BLOCKED 并停止请求; 无验证绕过.
+- 验证仅使用合成图片和离线响应, 本轮未访问内容来源或部署 NAS; 测试和 Docker CI 结果见 [当前交接](LATEST.md).
