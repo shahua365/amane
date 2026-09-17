@@ -85,3 +85,4 @@ class HttpExchangeMeta(BaseModel):
     content_type: str | None = None
     body_file: str | None = None
     elapsed_ms: int | None = None
+    attempts: int | None = None

@@ -53,13 +53,18 @@ class Crawler(ABC):
     def __init__(self, client: HttpClient, config: SiteConfig | None = None):
         self._profile = self.profile()
         self.name = self._profile.name
-        self.client = client
         self.config = config
 
         self.base_url = self._profile.base_url
         self.cookies = dict(self._profile.cookies)
         self.headers = dict(self._profile.headers)
         self._resolve_config()
+        self.client = client.for_source(
+            str(self.name),
+            config,
+            default_headers=self.headers,
+            default_cookies=self.cookies,
+        )
 
     def _resolve_config(self):
         if self.config is None:
@@ -70,6 +75,9 @@ class Crawler(ABC):
 
         for k, v in self.config.cookie.items():
             self.cookies[k] = v
+        self.headers.update(self.config.headers)
+        if self.config.user_agent:
+            self.headers["User-Agent"] = self.config.user_agent
 
     @property
     def logger(self) -> structlog.stdlib.BoundLogger:

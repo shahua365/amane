@@ -20,6 +20,7 @@ class FailureKind(StrEnum):
     TIMEOUT = "timeout"
     CURL = "curl"
     UNEXPECTED = "unexpected"
+    COOLDOWN = "cooldown"
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,6 +51,10 @@ class FailureReason(StrEnum):
     IP_BANNED = "ip_banned"
     GEO_RESTRICTED = "geo_restricted"
     AGE_VERIFICATION = "age_verification"
+    LOGIN_REQUIRED = "login_required"
+    MAINTENANCE = "maintenance"
+    INVALID_CONTENT_TYPE = "invalid_content_type"
+    COOLDOWN = "cooldown"
     EMPTY_RESPONSE = "empty_response"
     NO_USABLE_METADATA = "no_usable_metadata"
     """请求成功但未解析出元数据; 区别于 NOT_FOUND 的 HTTP 404."""
@@ -144,9 +149,9 @@ def _classify_text(text: str) -> FailureReason | None:
         return FailureReason.GEO_RESTRICTED
     if "banned your access" in lower:
         return FailureReason.IP_BANNED
-    if "ray-id" in lower and "cf-" in lower:
+    if ("ray-id" in lower and "cf-" in lower) or "cf-error-code" in lower:
         return FailureReason.CLOUDFLARE_BLOCKED
-    if "just a moment" in lower and "cloudflare" in lower:
+    if ("just a moment" in lower and ("cloudflare" in lower or "cf-" in lower)) or "cf-chl-" in lower:
         return FailureReason.CLOUDFLARE_CHALLENGE
     if "driver-verify" in lower:
         return FailureReason.AGE_VERIFICATION
@@ -154,6 +159,15 @@ def _classify_text(text: str) -> FailureReason | None:
     page_text = " ".join(Selector(text=text).xpath("//text()[not(ancestor::script or ancestor::style)]").getall())
     if "年齢認証" in page_text or "age verification" in page_text.lower():
         return FailureReason.AGE_VERIFICATION
+    selector = Selector(text=text)
+    title = " ".join(selector.xpath("//title/text()").getall()).strip().lower()
+    if selector.xpath('//input[@type="password"]') and any(
+        marker in title for marker in ("login", "log in", "sign in", "ログイン", "登录", "登入")
+    ):
+        return FailureReason.LOGIN_REQUIRED
+    visible = page_text.lower()
+    if any(marker in visible for marker in ("temporarily unavailable", "scheduled maintenance", "メンテナンス中")):
+        return FailureReason.MAINTENANCE
     return None
 
 
@@ -171,6 +185,8 @@ def classify_request_error(failure: RequestFailure | None) -> FailureReason:
         return FailureReason.NETWORK
     if failure.kind == FailureKind.UNEXPECTED:
         return FailureReason.UNEXPECTED
+    if failure.kind == FailureKind.COOLDOWN:
+        return FailureReason.COOLDOWN
     if failure.status is not None and failure.status >= 400:
         return _status_reason(failure.status)
     return FailureReason.HTTP_ERROR

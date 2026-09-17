@@ -1,6 +1,6 @@
 """crawler 测试的共享 fixtures"""
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -10,7 +10,9 @@ from amane.crawlers.http import HttpClient
 @pytest.fixture
 def mock_web_client():
     """提供一个 mock WebClient"""
-    return AsyncMock()
+    client = AsyncMock()
+    client.register_source = MagicMock()
+    return client
 
 
 @pytest.fixture

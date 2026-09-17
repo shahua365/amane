@@ -26,7 +26,7 @@
 | `observability/` | 进程级日志管线 + 单任务 Recorder | 叙事经 structlog; 任务产物落 `{log_dir}/tasks/task-{id}/` |
 | `app/` | 进程组合根 (`AppRuntime` / `build_*` / `start_app`) | HTTP 与 CLI / 回放共用; 不依赖 FastAPI; 拥有启停顺序 |
 | `api/` | FastAPI 适配 (路由 / WS / `create_app`) | 不持有业务状态与生命周期编排; lifespan 把 `AppSession` 写入 `app.state.runtime`; 约定见 [api.md](api.md) |
-| `net/` | curl_cffi WebClient + 按 host 的限速器 | 限速器必须先于 WebClient 构造; HTTP 录制经 `net.recording` 可选绑定 |
+| `net/` | curl_cffi WebClient + 来源会话池 + 按 host 的限速器 | 来源身份隔离, 限速器必须先于 WebClient 构造; HTTP 录制经 `net.recording` 可选绑定 |
 | `enums.py` | 跨包枚举 (站点名 / 字段名 / 语言) | 必须留在顶层; 拆进子包会形成循环依赖 |
 
 **导入约定:** 包内模块使用相对导入, 最多三点 (`...`), 再深则改用 `from amane...`. 迁移脚本必须使用绝对导入 — Alembic 按文件路径加载, 无法识别相对导入. 包外 (测试、第三方插件、独立脚本) 从顶层包导入已导出的稳定符号. 插件与主机的导入边界见 [plugins.md](plugins.md).
@@ -45,7 +45,7 @@ EventBus → 日志 → 来源插件发现 → 主 DB engine + Repository → r1
 ```
 
 - **EventBus 必须最先**: 日志 pipeline 把 structlog 事件转发到 WebSocket, 颠倒会丢启动期日志.
-- **RateLimiters 在 WebClient 之前**: WebClient 持有漏桶引用, 重建限速器等于重建 WebClient.
+- **RateLimiters 在 WebClient 之前**: WebClient 持有漏桶与来源会话池; 热重载替换网络栈后必须关闭旧 WebClient.
 - **来源插件在网络栈之前发现**: descriptor 提供来源 URL、多语言能力与默认速率, 配置中的外部来源 ID 须先经当前插件目录校验再构造 `CrawlerFactory`; 目录替换走同一套 `rebuild()`, 见 [plugins.md](plugins.md).
 - **CrawlerFactory 缓存爬虫实例**, 只在 `HttpClient` 更换后才需重建.
 - **Handlers 在 Worker 之前**: Worker 启动后立即 claim 任务, handler map 必须已就位.

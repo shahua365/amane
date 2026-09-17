@@ -1,6 +1,6 @@
 """测试 OfficialCrawler 路由逻辑."""
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -22,7 +22,9 @@ from amane.crawlers.sites.official import (
 
 @pytest.fixture
 def crawler():
-    client = HttpClient(web=AsyncMock())
+    web = AsyncMock()
+    web.register_source = MagicMock()
+    client = HttpClient(web=web)
     return OfficialCrawler(client=client)
 
 

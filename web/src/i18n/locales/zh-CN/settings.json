@@ -299,6 +299,14 @@
             "label": "Cookie",
             "description": "用于需要登录的站点等"
           },
+          "user_agent": {
+            "label": "User-Agent",
+            "description": "与该站点 Cookie 配套的固定浏览器标识"
+          },
+          "headers": {
+            "label": "请求头",
+            "description": "该站点会话使用的固定请求头"
+          },
           "api_token": {
             "label": "API Token",
             "description": ""
@@ -343,6 +351,30 @@
           "rate_limit": {
             "label": "速率限制",
             "description": "该站点每秒请求上限"
+          },
+          "timeout": {
+            "label": "超时秒数",
+            "description": "覆盖全局请求超时"
+          },
+          "max_retries": {
+            "label": "最大尝试次数",
+            "description": "包含首次请求"
+          },
+          "max_concurrency": {
+            "label": "最大并发数",
+            "description": "该来源同时执行的请求上限"
+          },
+          "request_jitter": {
+            "label": "请求抖动",
+            "description": "按限速间隔增加随机等待的比例"
+          },
+          "blocked_cooldown": {
+            "label": "受限冷却秒数",
+            "description": "识别访问限制后暂停该来源的时间"
+          },
+          "failure_cooldown": {
+            "label": "失败冷却秒数",
+            "description": "连续网络或服务端失败后暂停该来源的时间"
           }
         }
       },
@@ -436,6 +468,10 @@
       "max_retries": {
         "label": "最大重试次数",
         "description": "请求失败时的最大重试次数"
+      },
+      "retry_budget": {
+        "label": "任务重试预算",
+        "description": "单个任务允许的额外 HTTP 尝试总数"
       },
       "max_clients": {
         "label": "最大连接数",

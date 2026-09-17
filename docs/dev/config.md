@@ -39,13 +39,13 @@ RateLimiters → WebClient → HttpClient → CrawlerFactory
 
 `watcher.use_polling` / `media_extensions` / `debounce_seconds` 在 `start_app` 构造时一次性注入, **不随 rebuild 更新**, 修改 TOML 后须重启; Library 级的 `automation` / `ingest` / `cloud_path` / 路径 / `trailer_pattern` 等由 libraries 路由热更新, 与这三项无关. 契约见 [watcher.md](watcher.md).
 
-旧 worker 在 rebuild 后被替换: 调用方必须排空旧 worker 再启动新的, 否则两个 worker 会同时认领任务. 新 worker 继承 pause. 配置 PATCH、插件启用 / 禁用、插件安装 / 卸载 / 重新扫描都经由 `AppRuntime.apply_rebuild()`, 串行化这段替换.
+旧 worker 在 rebuild 后被替换: 调用方必须排空旧 worker 再启动新的, 然后关闭旧 WebClient 及其来源会话. 新 worker 继承 pause. 配置 PATCH、插件启用 / 禁用、插件安装 / 卸载 / 重新扫描都经由 `AppRuntime.apply_rebuild()`, 串行化这段替换.
 
 **r18 只读引擎**: 只在 `hot.r18` 实际变化时重建. rebuild 是同步的, 无法 await 释放 asyncpg 连接池, 旧引擎暂存 `_old_r18_db`, 由 config 路由随后 `dispose_old_r18()` 异步关闭.
 
 ## 网络限速
 
-`net/http.py::RateLimiters.from_config` 按 host 共用许可; 同 host 的站点默认值取较保守值, 显式 `network.rate_limits` 优先. `WebClient._request_hops` 对重试与重定向逐次限速, 新重定向 host 继承来源速率; 跨 host 移除显式认证头与 Cookie. 429 的 `Retry-After` 超过最大等待时结束当前请求; GET 404 负缓存只在进程内保留, 网络栈重建清空. 参数、单位与范围见 `NetworkConfig`.
+`net/http.py::RateLimiters.from_config` 按 host 共用许可; 同 host 的站点默认值取较保守值, 显式 `network.rate_limits` 优先. `WebClient` 按来源持有稳定 Session、CookieJar、UA 与 headers, 同时按 host 限速; 跨 host 重定向移除请求级认证头与 Cookie. `SiteConfig` 可覆盖 timeout、max_retries、max_concurrency、request_jitter 与两类 cooldown; `network.retry_budget` 限制单任务全部来源的额外尝试总数. GET 404 负缓存键包含来源与 URL, 网络栈重建时清空.
 
 ## TOML 持久化
 

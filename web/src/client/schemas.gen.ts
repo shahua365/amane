@@ -1383,6 +1383,10 @@ export const FailureReasonSchema = {
         'ip_banned',
         'geo_restricted',
         'age_verification',
+        'login_required',
+        'maintenance',
+        'invalid_content_type',
+        'cooldown',
         'empty_response',
         'no_usable_metadata',
         'parse_error',
@@ -2201,6 +2205,7 @@ export const HotSettingsSchema = {
                 site_config: {
                     airav: {
                         cookie: {},
+                        headers: {},
                         official_routes: {},
                         rate_limit: 0.2,
                         use_browser: false,
@@ -2208,6 +2213,7 @@ export const HotSettingsSchema = {
                     },
                     avsox: {
                         cookie: {},
+                        headers: {},
                         official_routes: {},
                         rate_limit: 0.1,
                         use_browser: false,
@@ -2215,6 +2221,7 @@ export const HotSettingsSchema = {
                     },
                     dahlia: {
                         cookie: {},
+                        headers: {},
                         official_routes: {},
                         rate_limit: 0.5,
                         use_browser: false,
@@ -2222,6 +2229,7 @@ export const HotSettingsSchema = {
                     },
                     dmm: {
                         cookie: {},
+                        headers: {},
                         official_routes: {},
                         rate_limit: 0.5,
                         use_browser: false,
@@ -2229,6 +2237,7 @@ export const HotSettingsSchema = {
                     },
                     faleno: {
                         cookie: {},
+                        headers: {},
                         official_routes: {},
                         rate_limit: 0.5,
                         use_browser: false,
@@ -2236,6 +2245,7 @@ export const HotSettingsSchema = {
                     },
                     fc2: {
                         cookie: {},
+                        headers: {},
                         official_routes: {},
                         rate_limit: 0.3,
                         use_browser: false,
@@ -2243,6 +2253,7 @@ export const HotSettingsSchema = {
                     },
                     fc2club: {
                         cookie: {},
+                        headers: {},
                         official_routes: {},
                         rate_limit: 0.05,
                         use_browser: false,
@@ -2250,6 +2261,7 @@ export const HotSettingsSchema = {
                     },
                     fc2cmadb: {
                         cookie: {},
+                        headers: {},
                         official_routes: {},
                         rate_limit: 0.02,
                         use_browser: false,
@@ -2257,6 +2269,7 @@ export const HotSettingsSchema = {
                     },
                     fd2ppv: {
                         cookie: {},
+                        headers: {},
                         official_routes: {},
                         rate_limit: 0.05,
                         use_browser: false,
@@ -2264,6 +2277,7 @@ export const HotSettingsSchema = {
                     },
                     freejavbt: {
                         cookie: {},
+                        headers: {},
                         official_routes: {},
                         rate_limit: 0.2,
                         use_browser: false,
@@ -2271,6 +2285,7 @@ export const HotSettingsSchema = {
                     },
                     getchu: {
                         cookie: {},
+                        headers: {},
                         official_routes: {},
                         rate_limit: 0.5,
                         use_browser: false,
@@ -2278,6 +2293,7 @@ export const HotSettingsSchema = {
                     },
                     gfriends: {
                         cookie: {},
+                        headers: {},
                         official_routes: {},
                         rate_limit: 1,
                         use_browser: false,
@@ -2285,6 +2301,7 @@ export const HotSettingsSchema = {
                     },
                     giga: {
                         cookie: {},
+                        headers: {},
                         official_routes: {},
                         rate_limit: 0.5,
                         use_browser: false,
@@ -2292,6 +2309,7 @@ export const HotSettingsSchema = {
                     },
                     iqqtv: {
                         cookie: {},
+                        headers: {},
                         official_routes: {},
                         rate_limit: 0.2,
                         use_browser: false,
@@ -2299,6 +2317,7 @@ export const HotSettingsSchema = {
                     },
                     jav321: {
                         cookie: {},
+                        headers: {},
                         official_routes: {},
                         rate_limit: 0.2,
                         use_browser: false,
@@ -2306,6 +2325,7 @@ export const HotSettingsSchema = {
                     },
                     javarchive: {
                         cookie: {},
+                        headers: {},
                         official_routes: {},
                         rate_limit: 0.3,
                         use_browser: false,
@@ -2313,6 +2333,7 @@ export const HotSettingsSchema = {
                     },
                     javbus: {
                         cookie: {},
+                        headers: {},
                         official_routes: {},
                         rate_limit: 0.2,
                         use_browser: false,
@@ -2320,6 +2341,7 @@ export const HotSettingsSchema = {
                     },
                     javdb: {
                         cookie: {},
+                        headers: {},
                         official_routes: {},
                         rate_limit: 0.05,
                         use_browser: false,
@@ -2327,6 +2349,7 @@ export const HotSettingsSchema = {
                     },
                     javlibrary: {
                         cookie: {},
+                        headers: {},
                         official_routes: {},
                         rate_limit: 0.1,
                         use_browser: false,
@@ -2334,6 +2357,7 @@ export const HotSettingsSchema = {
                     },
                     kin8: {
                         cookie: {},
+                        headers: {},
                         official_routes: {},
                         rate_limit: 0.5,
                         use_browser: false,
@@ -2341,6 +2365,7 @@ export const HotSettingsSchema = {
                     },
                     mgstage: {
                         cookie: {},
+                        headers: {},
                         official_routes: {},
                         rate_limit: 0.5,
                         use_browser: false,
@@ -2348,6 +2373,7 @@ export const HotSettingsSchema = {
                     },
                     minnano: {
                         cookie: {},
+                        headers: {},
                         official_routes: {},
                         rate_limit: 0.5,
                         use_browser: false,
@@ -2355,6 +2381,7 @@ export const HotSettingsSchema = {
                     },
                     official: {
                         cookie: {},
+                        headers: {},
                         official_routes: {},
                         rate_limit: 0.5,
                         use_browser: false,
@@ -2362,6 +2389,7 @@ export const HotSettingsSchema = {
                     },
                     prestige: {
                         cookie: {},
+                        headers: {},
                         official_routes: {},
                         rate_limit: 0.5,
                         use_browser: false,
@@ -2369,6 +2397,7 @@ export const HotSettingsSchema = {
                     },
                     r18dev: {
                         cookie: {},
+                        headers: {},
                         official_routes: {},
                         rate_limit: 0.5,
                         use_browser: false,
@@ -2376,6 +2405,7 @@ export const HotSettingsSchema = {
                     },
                     theporndb: {
                         cookie: {},
+                        headers: {},
                         official_routes: {},
                         rate_limit: 0.5,
                         use_browser: false,
@@ -2383,6 +2413,7 @@ export const HotSettingsSchema = {
                     },
                     wikipedia: {
                         cookie: {},
+                        headers: {},
                         official_routes: {},
                         rate_limit: 1,
                         use_browser: false,
@@ -2390,6 +2421,7 @@ export const HotSettingsSchema = {
                     },
                     xcity: {
                         cookie: {},
+                        headers: {},
                         official_routes: {},
                         rate_limit: 0.5,
                         use_browser: false,
@@ -2440,6 +2472,7 @@ export const HotSettingsSchema = {
                 negative_cache_ttl: 43200,
                 timeout: 10,
                 max_retries: 3,
+                retry_budget: 12,
                 max_clients: 50,
                 browser_timeout: 15000,
                 chunked_threshold: 2097152,
@@ -4614,6 +4647,13 @@ export const NetworkConfigSchema = {
             title: 'Max Retries',
             default: 3
         },
+        retry_budget: {
+            type: 'integer',
+            maximum: 100,
+            minimum: 0,
+            title: 'Retry Budget',
+            default: 12
+        },
         max_clients: {
             type: 'integer',
             maximum: 500,
@@ -6060,8 +6100,26 @@ export const SiteConfigSchema = {
                 type: 'string'
             },
             type: 'object',
-            title: 'Cookie',
-            default: {}
+            title: 'Cookie'
+        },
+        user_agent: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'User Agent'
+        },
+        headers: {
+            additionalProperties: {
+                type: 'string'
+            },
+            type: 'object',
+            title: 'Headers',
+            'x-hidden': true
         },
         api_token: {
             anyOf: [
@@ -6100,6 +6158,84 @@ export const SiteConfigSchema = {
             ],
             title: 'Rate Limit',
             default: 0.5
+        },
+        timeout: {
+            anyOf: [
+                {
+                    type: 'number',
+                    maximum: 300,
+                    minimum: 5
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Timeout'
+        },
+        max_retries: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 10,
+                    minimum: 0
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Max Retries'
+        },
+        max_concurrency: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 10,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Max Concurrency'
+        },
+        request_jitter: {
+            anyOf: [
+                {
+                    type: 'number',
+                    maximum: 1,
+                    minimum: 0
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Request Jitter'
+        },
+        blocked_cooldown: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 604800,
+                    minimum: 60
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Blocked Cooldown'
+        },
+        failure_cooldown: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 86400,
+                    minimum: 0
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Failure Cooldown'
         }
     },
     type: 'object',

@@ -72,6 +72,12 @@ def redact_hot(data: dict[str, Any]) -> dict[str, Any]:
                 cookie = site_cfg.get("cookie")
                 if isinstance(cookie, dict) and cookie:
                     site_cfg["cookie"] = dict.fromkeys(cookie, REDACTION_PLACEHOLDER)
+                headers = site_cfg.get("headers")
+                if isinstance(headers, dict):
+                    site_cfg["headers"] = {
+                        key: REDACTION_PLACEHOLDER if _is_secret_header(key) and value else value
+                        for key, value in headers.items()
+                    }
                 if site_cfg.get("api_token"):
                     site_cfg["api_token"] = REDACTION_PLACEHOLDER
 
@@ -100,6 +106,12 @@ def redact_hot(data: dict[str, Any]) -> dict[str, Any]:
 
 
 _SECRET_KEY_PARTS = ("api_key", "apikey", "token", "secret", "password", "cookie", "credential", "dsn")
+_SECRET_HEADER_NAMES = frozenset({"authorization", "cookie", "proxy-authorization", "x-api-key"})
+
+
+def _is_secret_header(key: object) -> bool:
+    normalized = str(key).lower().strip()
+    return normalized in _SECRET_HEADER_NAMES or "token" in normalized or "secret" in normalized
 
 
 def _is_secret_key(key: object) -> bool:

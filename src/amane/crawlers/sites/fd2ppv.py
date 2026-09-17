@@ -20,12 +20,7 @@ class FD2PPVCrawler(Crawler):
         number = self._clean_number(query.number)
         if not number:
             return None
-        url = f"{self.base_url}/articles/{number}"
-        text = await self.client.get_html(url, headers=self.headers, cookies=self.cookies)
-        if not text:
-            return None
-        title = self._title(Selector(text=text), number)
-        return url if title else None
+        return f"{self.base_url}/articles/{number}"
 
     async def _scrape(self, url: str, options: FetchOptions | None = None) -> MediaMetadata | None:
         text = await self.client.get_html(url, headers=self.headers, cookies=self.cookies)
@@ -133,9 +128,9 @@ class FD2PPVCrawler(Crawler):
         return first * 60 + second if match.group(3) is not None else first
 
     def _image_urls(self, html: Selector) -> list[str]:
+        image_base = '//*[contains(concat(" ", normalize-space(@class), " "), " carousel-slide ")]//img'
         values = html.xpath(
-            '//*[contains(concat(" ", normalize-space(@class), " "), " carousel-slide ")]//img/'
-            "(@data-src|@data-original|@data-lazy-src|@src)"
+            f"{image_base}/@data-src | {image_base}/@data-original | {image_base}/@data-lazy-src | {image_base}/@src"
         ).getall()
         images: list[str] = []
         for value in values:

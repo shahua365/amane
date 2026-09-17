@@ -794,7 +794,7 @@ export type FacetSortField = 'name' | 'count';
  *
  * summary.json / task report 的 reason 字段.
  */
-export type FailureReason = 'http_error' | 'not_found' | 'rate_limited' | 'server_error' | 'timeout' | 'network' | 'cloudflare_challenge' | 'cloudflare_blocked' | 'ip_banned' | 'geo_restricted' | 'age_verification' | 'empty_response' | 'no_usable_metadata' | 'parse_error' | 'crawler_unavailable' | 'unexpected';
+export type FailureReason = 'http_error' | 'not_found' | 'rate_limited' | 'server_error' | 'timeout' | 'network' | 'cloudflare_challenge' | 'cloudflare_blocked' | 'ip_banned' | 'geo_restricted' | 'age_verification' | 'login_required' | 'maintenance' | 'invalid_content_type' | 'cooldown' | 'empty_response' | 'no_usable_metadata' | 'parse_error' | 'crawler_unavailable' | 'unexpected';
 
 /**
  * FeedCreateRequest
@@ -2177,6 +2177,10 @@ export type NetworkConfig = {
      */
     max_retries?: number;
     /**
+     * Retry Budget
+     */
+    retry_budget?: number;
+    /**
      * Max Clients
      */
     max_clients?: number;
@@ -2987,6 +2991,16 @@ export type SiteConfig = {
         [key: string]: string;
     };
     /**
+     * User Agent
+     */
+    user_agent?: string | null;
+    /**
+     * Headers
+     */
+    headers?: {
+        [key: string]: string;
+    };
+    /**
      * Api Token
      */
     api_token?: string | null;
@@ -3000,6 +3014,30 @@ export type SiteConfig = {
      * Rate Limit
      */
     rate_limit?: number | null;
+    /**
+     * Timeout
+     */
+    timeout?: number | null;
+    /**
+     * Max Retries
+     */
+    max_retries?: number | null;
+    /**
+     * Max Concurrency
+     */
+    max_concurrency?: number | null;
+    /**
+     * Request Jitter
+     */
+    request_jitter?: number | null;
+    /**
+     * Blocked Cooldown
+     */
+    blocked_cooldown?: number | null;
+    /**
+     * Failure Cooldown
+     */
+    failure_cooldown?: number | null;
 };
 
 /**
@@ -6297,7 +6335,7 @@ export type GetTaskRecordData = {
         /**
          * Include Secrets
          *
-         * Include plaintext cookies/tokens from local secrets snapshot
+         * Use a legacy local plaintext snapshot when one already exists
          */
         include_secrets?: boolean;
     };

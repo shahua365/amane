@@ -4717,7 +4717,7 @@
           "tasks"
         ],
         "summary": "Get Task Record",
-        "description": "导出任务记录 (zip). 默认脱敏; include_secrets=true 需本地存在 .secrets.hot.json.",
+        "description": "导出任务记录 (zip). 新记录只保存脱敏配置; include_secrets 仅兼容已有旧记录.",
         "operationId": "get_task_record",
         "parameters": [
           {
@@ -4735,11 +4735,11 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "description": "Include plaintext cookies/tokens from local secrets snapshot",
+              "description": "Use a legacy local plaintext snapshot when one already exists",
               "default": false,
               "title": "Include Secrets"
             },
-            "description": "Include plaintext cookies/tokens from local secrets snapshot"
+            "description": "Use a legacy local plaintext snapshot when one already exists"
           }
         ],
         "responses": {
@@ -7043,6 +7043,10 @@
           "ip_banned",
           "geo_restricted",
           "age_verification",
+          "login_required",
+          "maintenance",
+          "invalid_content_type",
+          "cooldown",
           "empty_response",
           "no_usable_metadata",
           "parse_error",
@@ -7844,6 +7848,7 @@
               "site_config": {
                 "airav": {
                   "cookie": {},
+                  "headers": {},
                   "official_routes": {},
                   "rate_limit": 0.2,
                   "use_browser": false,
@@ -7851,6 +7856,7 @@
                 },
                 "avsox": {
                   "cookie": {},
+                  "headers": {},
                   "official_routes": {},
                   "rate_limit": 0.1,
                   "use_browser": false,
@@ -7858,6 +7864,7 @@
                 },
                 "dahlia": {
                   "cookie": {},
+                  "headers": {},
                   "official_routes": {},
                   "rate_limit": 0.5,
                   "use_browser": false,
@@ -7865,6 +7872,7 @@
                 },
                 "dmm": {
                   "cookie": {},
+                  "headers": {},
                   "official_routes": {},
                   "rate_limit": 0.5,
                   "use_browser": false,
@@ -7872,6 +7880,7 @@
                 },
                 "faleno": {
                   "cookie": {},
+                  "headers": {},
                   "official_routes": {},
                   "rate_limit": 0.5,
                   "use_browser": false,
@@ -7879,6 +7888,7 @@
                 },
                 "fc2": {
                   "cookie": {},
+                  "headers": {},
                   "official_routes": {},
                   "rate_limit": 0.3,
                   "use_browser": false,
@@ -7886,6 +7896,7 @@
                 },
                 "fc2club": {
                   "cookie": {},
+                  "headers": {},
                   "official_routes": {},
                   "rate_limit": 0.05,
                   "use_browser": false,
@@ -7893,6 +7904,7 @@
                 },
                 "fc2cmadb": {
                   "cookie": {},
+                  "headers": {},
                   "official_routes": {},
                   "rate_limit": 0.02,
                   "use_browser": false,
@@ -7900,6 +7912,7 @@
                 },
                 "fd2ppv": {
                   "cookie": {},
+                  "headers": {},
                   "official_routes": {},
                   "rate_limit": 0.05,
                   "use_browser": false,
@@ -7907,6 +7920,7 @@
                 },
                 "freejavbt": {
                   "cookie": {},
+                  "headers": {},
                   "official_routes": {},
                   "rate_limit": 0.2,
                   "use_browser": false,
@@ -7914,6 +7928,7 @@
                 },
                 "getchu": {
                   "cookie": {},
+                  "headers": {},
                   "official_routes": {},
                   "rate_limit": 0.5,
                   "use_browser": false,
@@ -7921,6 +7936,7 @@
                 },
                 "gfriends": {
                   "cookie": {},
+                  "headers": {},
                   "official_routes": {},
                   "rate_limit": 1.0,
                   "use_browser": false,
@@ -7928,6 +7944,7 @@
                 },
                 "giga": {
                   "cookie": {},
+                  "headers": {},
                   "official_routes": {},
                   "rate_limit": 0.5,
                   "use_browser": false,
@@ -7935,6 +7952,7 @@
                 },
                 "iqqtv": {
                   "cookie": {},
+                  "headers": {},
                   "official_routes": {},
                   "rate_limit": 0.2,
                   "use_browser": false,
@@ -7942,6 +7960,7 @@
                 },
                 "jav321": {
                   "cookie": {},
+                  "headers": {},
                   "official_routes": {},
                   "rate_limit": 0.2,
                   "use_browser": false,
@@ -7949,6 +7968,7 @@
                 },
                 "javarchive": {
                   "cookie": {},
+                  "headers": {},
                   "official_routes": {},
                   "rate_limit": 0.3,
                   "use_browser": false,
@@ -7956,6 +7976,7 @@
                 },
                 "javbus": {
                   "cookie": {},
+                  "headers": {},
                   "official_routes": {},
                   "rate_limit": 0.2,
                   "use_browser": false,
@@ -7963,6 +7984,7 @@
                 },
                 "javdb": {
                   "cookie": {},
+                  "headers": {},
                   "official_routes": {},
                   "rate_limit": 0.05,
                   "use_browser": false,
@@ -7970,6 +7992,7 @@
                 },
                 "javlibrary": {
                   "cookie": {},
+                  "headers": {},
                   "official_routes": {},
                   "rate_limit": 0.1,
                   "use_browser": false,
@@ -7977,6 +8000,7 @@
                 },
                 "kin8": {
                   "cookie": {},
+                  "headers": {},
                   "official_routes": {},
                   "rate_limit": 0.5,
                   "use_browser": false,
@@ -7984,6 +8008,7 @@
                 },
                 "mgstage": {
                   "cookie": {},
+                  "headers": {},
                   "official_routes": {},
                   "rate_limit": 0.5,
                   "use_browser": false,
@@ -7991,6 +8016,7 @@
                 },
                 "minnano": {
                   "cookie": {},
+                  "headers": {},
                   "official_routes": {},
                   "rate_limit": 0.5,
                   "use_browser": false,
@@ -7998,6 +8024,7 @@
                 },
                 "official": {
                   "cookie": {},
+                  "headers": {},
                   "official_routes": {},
                   "rate_limit": 0.5,
                   "use_browser": false,
@@ -8005,6 +8032,7 @@
                 },
                 "prestige": {
                   "cookie": {},
+                  "headers": {},
                   "official_routes": {},
                   "rate_limit": 0.5,
                   "use_browser": false,
@@ -8012,6 +8040,7 @@
                 },
                 "r18dev": {
                   "cookie": {},
+                  "headers": {},
                   "official_routes": {},
                   "rate_limit": 0.5,
                   "use_browser": false,
@@ -8019,6 +8048,7 @@
                 },
                 "theporndb": {
                   "cookie": {},
+                  "headers": {},
                   "official_routes": {},
                   "rate_limit": 0.5,
                   "use_browser": false,
@@ -8026,6 +8056,7 @@
                 },
                 "wikipedia": {
                   "cookie": {},
+                  "headers": {},
                   "official_routes": {},
                   "rate_limit": 1.0,
                   "use_browser": false,
@@ -8033,6 +8064,7 @@
                 },
                 "xcity": {
                   "cookie": {},
+                  "headers": {},
                   "official_routes": {},
                   "rate_limit": 0.5,
                   "use_browser": false,
@@ -8083,6 +8115,7 @@
               "negative_cache_ttl": 43200.0,
               "timeout": 10.0,
               "max_retries": 3,
+              "retry_budget": 12,
               "max_clients": 50,
               "browser_timeout": 15000,
               "chunked_threshold": 2097152,
@@ -10225,6 +10258,13 @@
             "title": "Max Retries",
             "default": 3
           },
+          "retry_budget": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Retry Budget",
+            "default": 12
+          },
           "max_clients": {
             "type": "integer",
             "maximum": 500.0,
@@ -11637,8 +11677,26 @@
               "type": "string"
             },
             "type": "object",
-            "title": "Cookie",
-            "default": {}
+            "title": "Cookie"
+          },
+          "user_agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Agent"
+          },
+          "headers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Headers",
+            "x-hidden": true
           },
           "api_token": {
             "anyOf": [
@@ -11677,6 +11735,84 @@
             ],
             "title": "Rate Limit",
             "default": 0.5
+          },
+          "timeout": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 300.0,
+                "minimum": 5.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeout"
+          },
+          "max_retries": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Retries"
+          },
+          "max_concurrency": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Concurrency"
+          },
+          "request_jitter": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Jitter"
+          },
+          "blocked_cooldown": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 604800.0,
+                "minimum": 60.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked Cooldown"
+          },
+          "failure_cooldown": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 86400.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Cooldown"
           }
         },
         "type": "object",

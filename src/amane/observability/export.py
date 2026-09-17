@@ -9,7 +9,7 @@ from .recorder import task_dir_for
 
 
 def build_record_zip(log_dir: Path, task_id: int, *, include_secrets: bool = False) -> bytes:
-    """默认排除 ``.secrets.hot.json``. ``include_secrets=True`` 时用密文配置替换 ``config.hot.json``, 并要求旁路密文文件存在."""
+    """始终排除旁路文件; ``include_secrets`` 只兼容已有旧记录, 新记录不会创建该文件."""
     root = task_dir_for(log_dir, task_id)
     if not root.is_dir() or not (root / "manifest.json").is_file():
         raise FileNotFoundError(f"record not found for task {task_id}")

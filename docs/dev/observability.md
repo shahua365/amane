@@ -34,7 +34,6 @@ task-{id}/
   manifest.json
   task.json
   config.hot.json          # 任务相关 Hot 切片 (已脱敏)
-  .secrets.hot.json        # 仅当确有密钥时写入
   summary.json             # 任务摘要: 资格站 / 调度顺序 / 站点结果表
   raw_cache.json           # 可选
   http/index.jsonl
@@ -66,7 +65,7 @@ Feed 失败记在源的 `last_error`, 不写入站点 outcome 表.
 
 | 内容 | 时机 |
 |------|------|
-| `task.json` + `config.hot.json` (+ 条件 `.secrets`) | `begin` |
+| `task.json` + `config.hot.json` | `begin` |
 | HTTP body | 失败时; 或 `logging.debug_capture=true` |
 | `summary.json` / `manifest.json` | `finalize` |
 | 图片 `get_bytes` / `download` | 只记 meta |
@@ -75,7 +74,7 @@ Feed 失败记在源的 `last_error`, 不写入站点 outcome 表.
 
 ### 脱敏
 
-默认脱敏 (`manifest.redacted=true`), 占位符 `***`; HTTP 索引不收录 Cookie / Authorization; 无密钥时不写 `.secrets.hot.json`.
+任务目录只保存脱敏配置 (`manifest.redacted=true`, 占位符 `***`), 不生成明文密钥旁路文件. HTTP 索引、错误文本与捕获正文替换当前来源 Cookie 及认证 header 值; 导出不得恢复凭据原文.
 
 ### 回放 CLI
 

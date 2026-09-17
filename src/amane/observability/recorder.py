@@ -15,11 +15,15 @@ from typing import TYPE_CHECKING, Any
 import structlog
 
 from ..net.errors import FailureReason
-from ..net.recording import bind_http_recorder_lookup, skip_http_body
+from ..net.recording import (
+    bind_http_recorder_lookup,
+    reset_retry_budget,
+    set_retry_budget,
+    skip_http_body,
+)
 from ..version import get_version
 from .models import (
     RECORD_VERSION,
-    SECRETS_HOT_FILENAME,
     CaptureReason,
     HttpExchangeMeta,
     RecordManifest,
@@ -28,7 +32,7 @@ from .models import (
     TaskSnapshot,
     TaskSummary,
 )
-from .redact import hot_slice_for_task, needs_secrets_file, redact_hot
+from .redact import hot_slice_for_task, redact_hot
 
 if TYPE_CHECKING:
     from ..config import HotSettings
@@ -141,6 +145,7 @@ class Recorder:
         self._capture_reason = CaptureReason.NONE
         self._recorder_token: Token[Recorder | None] | None = None
         self._task_id_token: Token[int | None] | None = None
+        self._retry_budget_token: Token[Any] | None = None
         self._log_handler: logging.FileHandler | None = None
         self._logger = structlog.get_logger()
 
@@ -153,13 +158,12 @@ class Recorder:
         rec = cls(root, task.id)
         rec._task_id_token = _task_id_ctx.set(task.id)
         rec._recorder_token = _recorder_ctx.set(rec)
+        rec._retry_budget_token = set_retry_budget(hot.network.retry_budget)
         rec._install_log_handler()
         rec._write_task_snapshot(task)
         task_type = str(task.type)
         hot_dump = hot_slice_for_task(hot.model_dump(mode="json"), task_type)
         rec._write_json(root / "config.hot.json", redact_hot(hot_dump))
-        if needs_secrets_file(hot_dump):
-            rec._write_json(root / SECRETS_HOT_FILENAME, hot_dump)
         return rec
 
     def debug(self, event: str, **kwargs: Any) -> None:
@@ -212,6 +216,7 @@ class Recorder:
                     content_type=content_type,
                     body_file=body_file,
                     elapsed_ms=elapsed_ms,
+                    attempts=attempts,
                 ),
                 body=stored,
             )
@@ -318,6 +323,10 @@ class Recorder:
             with contextlib.suppress(ValueError):
                 _task_id_ctx.reset(self._task_id_token)
             self._task_id_token = None
+        if self._retry_budget_token is not None:
+            with contextlib.suppress(ValueError):
+                reset_retry_budget(self._retry_budget_token)
+            self._retry_budget_token = None
 
     def _install_log_handler(self) -> None:
         handler = logging.FileHandler(self.root / "task.log", encoding="utf-8")

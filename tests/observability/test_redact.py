@@ -54,6 +54,20 @@ def test_needs_secrets_file(dump: dict, expected: bool):
             id="cookie-values-redacted-keys-kept",
         ),
         pytest.param(
+            {
+                "scraping": {
+                    "site_config": {
+                        "javdb": {"headers": {"Authorization": "Bearer secret", "Accept-Language": "zh-CN"}}
+                    }
+                }
+            },
+            lambda out: (
+                out["scraping"]["site_config"]["javdb"]["headers"]["Authorization"] == REDACTION_PLACEHOLDER
+                and out["scraping"]["site_config"]["javdb"]["headers"]["Accept-Language"] == "zh-CN"
+            ),
+            id="authorization-header-redacted",
+        ),
+        pytest.param(
             {"scraping": {"site_config": {"theporndb": {"cookie": {}, "api_token": "tok_abc"}}}},
             lambda out: out["scraping"]["site_config"]["theporndb"]["api_token"] == REDACTION_PLACEHOLDER,
             id="api-token-redacted",

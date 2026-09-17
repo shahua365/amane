@@ -8,7 +8,7 @@ import tomllib
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -137,6 +137,7 @@ def build_mock(mock_web: AsyncMock, case_dir: Path, responses: list[dict[str, An
 
 
 def http_client(mock_web: AsyncMock) -> HttpClient:
+    mock_web.register_source = MagicMock()
     return HttpClient(web=mock_web, browser=None)
 
 

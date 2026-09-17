@@ -299,6 +299,14 @@
             "label": "Cookie",
             "description": "For sites that require sign-in, etc."
           },
+          "user_agent": {
+            "label": "User-Agent",
+            "description": "Stable browser identity paired with this site's cookies"
+          },
+          "headers": {
+            "label": "Request Headers",
+            "description": "Stable headers used by this site's session"
+          },
           "api_token": {
             "label": "API Token",
             "description": ""
@@ -343,6 +351,30 @@
           "rate_limit": {
             "label": "Rate Limit",
             "description": "Max requests per second for this site"
+          },
+          "timeout": {
+            "label": "Timeout Seconds",
+            "description": "Override the global request timeout"
+          },
+          "max_retries": {
+            "label": "Maximum Attempts",
+            "description": "Includes the initial request"
+          },
+          "max_concurrency": {
+            "label": "Maximum Concurrency",
+            "description": "Concurrent request limit for this source"
+          },
+          "request_jitter": {
+            "label": "Request Jitter",
+            "description": "Random delay ratio based on the rate-limit interval"
+          },
+          "blocked_cooldown": {
+            "label": "Blocked Cooldown Seconds",
+            "description": "Pause this source after access restrictions are detected"
+          },
+          "failure_cooldown": {
+            "label": "Failure Cooldown Seconds",
+            "description": "Pause this source after consecutive network or server failures"
           }
         }
       },
@@ -436,6 +468,10 @@
       "max_retries": {
         "label": "Max Retries",
         "description": "Maximum retry attempts on request failure"
+      },
+      "retry_budget": {
+        "label": "Task Retry Budget",
+        "description": "Total additional HTTP attempts allowed for one task"
       },
       "max_clients": {
         "label": "Max Connections",

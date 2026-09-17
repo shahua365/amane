@@ -4,15 +4,18 @@ import json
 import zipfile
 from io import BytesIO
 from pathlib import Path
+from unittest.mock import AsyncMock
 
 import pytest
 import structlog
+from curl_cffi.requests import Response
 
 from amane.config import HotSettings
 from amane.crawlers.block import FailureReason
 from amane.db.models import Task, TaskStatus, TaskType
 from amane.enums import SiteName
 from amane.net import reset_skip_http_body, set_skip_http_body
+from amane.net.http import RateLimiters, WebClient
 from amane.observability.export import build_record_zip
 from amane.observability.models import SECRETS_HOT_FILENAME, CaptureReason, SiteOutcomeKind
 from amane.observability.recorder import Recorder, task_dir_for
@@ -65,8 +68,7 @@ def test_recorder_failure_keeps_http(tmp_path: Path, task: Task):
     assert "watcher" not in cfg
     assert "worker" not in cfg
     assert cfg["scraping"]["site_config"]["javdb"]["cookie"]["session"] == "***"
-    secrets = json.loads((root / SECRETS_HOT_FILENAME).read_text())
-    assert secrets["scraping"]["site_config"]["javdb"]["cookie"]["session"] == "secret"
+    assert not (root / SECRETS_HOT_FILENAME).exists()
     summary = json.loads((root / "summary.json").read_text())
     assert "error" not in summary
     assert "number" not in summary
@@ -147,12 +149,46 @@ def test_build_record_zip_include_secrets(tmp_path: Path, task: Task):
     task.status = TaskStatus.FAILED
     rec.finalize(task, success=False, error="boom", debug_capture=False)
 
-    data = build_record_zip(tmp_path, 42, include_secrets=True)
-    with zipfile.ZipFile(BytesIO(data)) as zf:
-        cfg = json.loads(zf.read("task-42/config.hot.json"))
-        assert cfg["llm"]["api_key"] == "sk-secret"
-        man = json.loads(zf.read("task-42/manifest.json"))
-        assert man["redacted"] is False
+    with pytest.raises(PermissionError, match="not available"):
+        build_record_zip(tmp_path, 42, include_secrets=True)
+    assert not (task_dir_for(tmp_path, 42) / SECRETS_HOT_FILENAME).exists()
+
+
+@pytest.mark.asyncio
+async def test_http_capture_redacts_source_cookie_value(tmp_path: Path, task: Task) -> None:
+    secret = "abcdef-cookie-secret"
+    token = "bearer-token-secret"
+    hot = HotSettings()
+    hot.scraping.site_config[SiteName.JAVDB].cookie = {"session": secret}
+    hot.scraping.site_config[SiteName.JAVDB].headers = {"Authorization": f"Bearer {token}"}
+    rec = Recorder.begin(tmp_path, task, hot)
+    client = WebClient(limiters=RateLimiters(default_rate=100), max_retries=1, request_jitter=0)
+    client.register_source(
+        "javdb",
+        hot.scraping.site_config[SiteName.JAVDB],
+        cookies={"session": secret},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    response = Response()
+    response.status_code = 200
+    response.headers["Content-Type"] = "text/html"
+    response.content = f"<html>echo={secret}; auth=Bearer {token}</html>".encode()
+    client._source_session("javdb").request = AsyncMock(return_value=response)
+    try:
+        await client.request("GET", f"https://example.com/?token={secret}", source_id="javdb")
+        task.status = TaskStatus.DONE
+        rec.finalize(task, success=True, error=None, debug_capture=True)
+    finally:
+        await client.close()
+        rec.close()
+    root = task_dir_for(tmp_path, 42)
+    index = (root / "http" / "index.jsonl").read_text(encoding="utf-8")
+    body = next((root / "http" / "bodies").iterdir()).read_bytes()
+    assert secret not in index
+    assert token not in index
+    assert secret.encode() not in body
+    assert token.encode() not in body
+    assert b"***" in body
 
 
 def test_record_http_skip_body(tmp_path: Path, task: Task):

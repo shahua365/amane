@@ -19,7 +19,7 @@ CrawlerFactory (缓存实例)
 
 外部影片插件在同一个 `CrawlerFactory` 中按来源 ID 延迟创建: 插件返回的 provider 经适配后满足影片爬虫的 `fetch()` 协议, 统一进入聚合、限速、HTTP 记录和站点结果摘要. 第三方来源 ID 规则见 [plugins.md](plugins.md).
 
-爬虫异步并发安全. `SiteConfig` 在构造期注入, `__init__` 内合并 profile 默认与用户配置, 子类直接使用 `self.base_url` / `self.cookies`; 实例可缓存, 仅配置变化时重建工厂.
+爬虫异步并发安全. `SiteConfig` 在构造期注入, `__init__` 合并 profile 默认与用户配置, 并取得来源级 `HttpClient`; 实例可缓存, 仅配置变化时重建工厂.
 
 - 演员站与影片站共用 HttpClient / 限速; 实现位于 `crawlers/actor/`, 只注册 `actor_registry` (可以不在影片 `registry`). **双料站**指同一 `SiteName` 在影片 / 演员注册表各有一个类并共用 `site_config`; 不允许在 `site_roles` 中手写双料名单.
 - gFriends 额外依赖 `data_dir` (Filetree 缓存) 与 `actor_scraping.gfriends_repo`.
@@ -59,7 +59,7 @@ CrawlerFactory (缓存实例)
 - HTML 页用 `get_html`: `get_text` + `classify_block`, 命中拦截 / 空页抛出 `SourceError`.
 - JSON API 用 `get_json` / `post_json`; Cloudflare 响应统一由 WebClient 拒绝.
 - `download` / `ResourceStore.acquire` 是机会主义的: 调用方 `except RequestError: return None` / 返回 `bool`, 不经由第二套错误通道.
-- 多 URL 试探失败须上报最后一次异常, 不允许吞没为裸 `None`. HTTP 403 / Cloudflare 将主机标记 BLOCKED; 当前 WebClient 生命周期内, 后续请求、排队与重定向均停止, 不自动恢复或执行验证绕过. 客户端重建后重新判定.
+- 多 URL 试探失败须上报最后一次异常, 不允许吞没为裸 `None`. HTTP 403 / Cloudflare 对来源开启 cooldown; 到期仅允许一个 half-open 探测, 其它来源继续执行. 不允许自动完成访问验证或绕过访问控制.
 
 ### 拦截判定
 
@@ -71,7 +71,7 @@ CrawlerFactory (缓存实例)
 
 ## 浏览器指纹
 
-`WebClient` 基于 curl_cffi, 每次请求从预设列表轮换指纹; 可选 Patchright 无头浏览器用于 JS 渲染页面 (`get_rendered`).
+`WebClient` 基于 curl_cffi, 每个来源 Session 在生命周期内固定 curl_cffi impersonate 与可配置 UA; 不允许逐请求轮换身份. 可选 Patchright 无头浏览器仅用于已授权的 JS 渲染页面 (`get_rendered`).
 
 ## 外部 API 读模型
 

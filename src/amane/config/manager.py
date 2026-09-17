@@ -247,7 +247,9 @@ class SiteConfig(BaseModel):
     base_url: str | None = None
     use_proxy: bool = True
     use_browser: bool = Field(default=False, json_schema_extra={"x-hidden": True})
-    cookie: dict[str, str] = {}
+    cookie: dict[str, str] = Field(default_factory=dict)
+    user_agent: str | None = None
+    headers: dict[str, str] = Field(default_factory=dict, json_schema_extra={"x-hidden": True})
     api_token: str | None = Field(default=None, json_schema_extra={"x-visible-keys": _SITES_WITH_API_TOKEN})
     official_routes: dict[str, Manufacturer] = Field(
         default_factory=dict, json_schema_extra={"x-visible-keys": [SiteName.OFFICIAL]}
@@ -256,6 +258,13 @@ class SiteConfig(BaseModel):
 
     rate_limit: float | None = Field(default=0.5, ge=0.01, le=100)
     """req/s. 全局 network.rate_limits 有此站点域名时全局优先."""
+
+    timeout: float | None = Field(default=None, ge=5.0, le=300.0)
+    max_retries: int | None = Field(default=None, ge=0, le=10)
+    max_concurrency: int | None = Field(default=None, ge=1, le=10)
+    request_jitter: float | None = Field(default=None, ge=0, le=1)
+    blocked_cooldown: int | None = Field(default=None, ge=60, le=604800)
+    failure_cooldown: int | None = Field(default=None, ge=0, le=86400)
 
 
 class ScrapingConfig(BaseModel):
@@ -519,6 +528,7 @@ class NetworkConfig(BaseModel):
     proxy: str | None = None
     timeout: float = Field(default=10.0, ge=5.0, le=300.0)
     max_retries: int = Field(default=3, ge=0, le=10)
+    retry_budget: int = Field(default=12, ge=0, le=100)
     max_clients: int = Field(default=50, ge=5, le=500, json_schema_extra={"x-hidden": True})
     browser_timeout: int = Field(default=15000, ge=5000, le=120000, json_schema_extra={"x-hidden": True})
 

@@ -6,6 +6,7 @@ WebClient 不依赖 observability; 由 observability.recorder 在导入时
 
 from collections.abc import Callable
 from contextvars import ContextVar, Token
+from dataclasses import dataclass
 from typing import Protocol
 
 
@@ -26,6 +27,14 @@ class HttpExchangeRecorder(Protocol):
 
 
 _skip_http_body_ctx: ContextVar[bool] = ContextVar("skip_http_body", default=False)
+
+
+@dataclass(slots=True)
+class RetryBudget:
+    remaining: int
+
+
+_retry_budget_ctx: ContextVar[RetryBudget | None] = ContextVar("retry_budget", default=None)
 _recorder_lookup: Callable[[], HttpExchangeRecorder | None] | None = None
 
 
@@ -39,6 +48,24 @@ def reset_skip_http_body(token: Token[bool]) -> None:
 
 def skip_http_body() -> bool:
     return _skip_http_body_ctx.get()
+
+
+def set_retry_budget(limit: int) -> Token[RetryBudget | None]:
+    return _retry_budget_ctx.set(RetryBudget(remaining=limit))
+
+
+def reset_retry_budget(token: Token[RetryBudget | None]) -> None:
+    _retry_budget_ctx.reset(token)
+
+
+def consume_retry_budget() -> bool:
+    budget = _retry_budget_ctx.get()
+    if budget is None:
+        return True
+    if budget.remaining <= 0:
+        return False
+    budget.remaining -= 1
+    return True
 
 
 def bind_http_recorder_lookup(lookup: Callable[[], HttpExchangeRecorder | None]) -> None:

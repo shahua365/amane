@@ -232,10 +232,10 @@ async def get_task_record(
     repo: RepoDep,
     config: ConfigDep,
     include_secrets: Annotated[
-        bool, Query(description="Include plaintext cookies/tokens from local secrets snapshot")
+        bool, Query(description="Use a legacy local plaintext snapshot when one already exists")
     ] = False,
 ):
-    """导出任务记录 (zip). 默认脱敏; include_secrets=true 需本地存在 .secrets.hot.json."""
+    """导出任务记录 (zip). 新记录只保存脱敏配置; include_secrets 仅兼容已有旧记录."""
     task = await repo.get_task(task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")

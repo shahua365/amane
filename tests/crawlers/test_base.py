@@ -155,6 +155,12 @@ def test_classify_block_status_reason(status: int, expected: FailureReason):
         ("This content is not available in your region", 403, FailureReason.GEO_RESTRICTED),
         # 正常 404 页 (无正文信号) → 按状态分类 not_found
         ("<html><body>404 Not Found</body></html>", 404, FailureReason.NOT_FOUND),
+        (
+            '<html><title>Sign in</title><body><input type="password"></body></html>',
+            200,
+            FailureReason.LOGIN_REQUIRED,
+        ),
+        ("<html><body>Scheduled maintenance</body></html>", 200, FailureReason.MAINTENANCE),
     ],
 )
 def test_classify_block_text_precedes_status(text: str, status: int, expected: FailureReason):

@@ -1842,7 +1842,7 @@ export const getTaskRecordQueryKey = (options: Options<GetTaskRecordData>) => cr
 /**
  * Get Task Record
  *
- * 导出任务记录 (zip). 默认脱敏; include_secrets=true 需本地存在 .secrets.hot.json.
+ * 导出任务记录 (zip). 新记录只保存脱敏配置; include_secrets 仅兼容已有旧记录.
  */
 export const getTaskRecordOptions = (options: Options<GetTaskRecordData>) => queryOptions<unknown, GetTaskRecordError, unknown, ReturnType<typeof getTaskRecordQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {

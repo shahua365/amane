@@ -286,12 +286,14 @@ class AppRuntime:
     async def _apply_rebuild_unlocked(self) -> None:
         """必须持有 ``_rebuild_lock``."""
         old_playback = self.playback_factory
+        old_web_client = self.web_client
         old_worker = self.rebuild()
         await old_worker.stop()
         self.worker.start()
         await self.dispose_old_r18()
         if old_playback is not None:
             await old_playback.aclose()
+        await old_web_client.close()
 
     def _replace_plugin_manager(self, discovered: PluginManager) -> None:
         discovered.validate_hot_settings(self.config.hot, require_available=False)

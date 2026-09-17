@@ -1,10 +1,13 @@
 """curl_cffi TLS 指纹模拟 + 限速 + 重试; 爬虫 / 图片 / Emby 等对外 HTTP 统一经此模块."""
 
+from __future__ import annotations
+
 import asyncio
 import os
 import random
 import time
 from contextlib import contextmanager
+from dataclasses import dataclass, field
 from email.utils import parsedate_to_datetime
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin, urlsplit
@@ -16,8 +19,8 @@ from aiolimiter import AsyncLimiter
 from curl_cffi import CurlError
 from curl_cffi.requests import AsyncSession, BrowserTypeLiteral, Response
 
-from .errors import FailureKind, FailureReason, RequestError, RequestFailure, classify_block
-from .recording import get_bound_http_recorder, reset_skip_http_body, set_skip_http_body
+from .errors import FailureKind, FailureReason, RequestError, RequestFailure, SourceError, classify_block
+from .recording import consume_retry_budget, get_bound_http_recorder, reset_skip_http_body, set_skip_http_body
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
@@ -151,6 +154,40 @@ def _failure_body(resp: Response | None) -> bytes | None:
 _FAILURE_BODY_LIMIT = 64 * 1024
 
 
+def _redact_values(value: str, secrets: tuple[str, ...]) -> str:
+    for secret in secrets:
+        value = value.replace(secret, "***")
+    return value
+
+
+def _redact_bytes(value: bytes | None, secrets: tuple[str, ...]) -> bytes | None:
+    if value is None:
+        return None
+    for secret in secrets:
+        value = value.replace(secret.encode(), b"***")
+    return value
+
+
+@dataclass(slots=True)
+class _SourcePolicy:
+    headers: dict[str, str] = field(default_factory=dict)
+    cookies: dict[str, str] = field(default_factory=dict)
+    timeout: float | None = None
+    max_retries: int | None = None
+    max_concurrency: int | None = None
+    request_jitter: float | None = None
+    blocked_cooldown: int = 21600
+    failure_cooldown: int = 300
+
+
+@dataclass(slots=True)
+class _SourceHealth:
+    cooldown_until: float = 0.0
+    failure: RequestFailure | None = None
+    consecutive_failures: int = 0
+    probe_task: asyncio.Task[object] | None = None
+
+
 class WebClient:
     def __init__(
         self,
@@ -179,6 +216,12 @@ class WebClient:
         self._blocked_hosts: dict[str, RequestFailure] = {}
         self._not_found: dict[str, float] = {}
         self._negative_cache_ttl = negative_cache_ttl
+        self._max_clients = max_clients
+        self._source_policies: dict[str, _SourcePolicy] = {}
+        self._source_sessions: dict[str, AsyncSession] = {}
+        self._source_slots: dict[str, asyncio.Semaphore] = {}
+        self._source_health: dict[str, _SourceHealth] = {}
+        self._inflight: dict[tuple[object, ...], asyncio.Task[Response]] = {}
         self._session = AsyncSession(
             max_clients=max_clients,
             verify=False,
@@ -186,6 +229,50 @@ class WebClient:
             timeout=timeout,
             impersonate=random.choice(_IMPERSONATE_OPTIONS),
         )
+
+    def register_source(
+        self,
+        source_id: str,
+        config: SiteConfig | None,
+        *,
+        headers: dict[str, str] | None = None,
+        cookies: dict[str, str] | None = None,
+    ) -> None:
+        """注册来源级稳定身份; 同一来源重复注册必须保持等价配置."""
+        policy = _SourcePolicy(
+            headers=dict(headers or {}),
+            cookies=dict(cookies or {}),
+            timeout=config.timeout if config is not None else None,
+            max_retries=config.max_retries if config is not None else None,
+            max_concurrency=config.max_concurrency if config is not None else None,
+            request_jitter=config.request_jitter if config is not None else None,
+            blocked_cooldown=config.blocked_cooldown or 21600 if config is not None else 21600,
+            failure_cooldown=config.failure_cooldown
+            if config is not None and config.failure_cooldown is not None
+            else 300,
+        )
+        existing = self._source_policies.get(source_id)
+        if existing is not None and existing != policy:
+            raise ValueError(f"source {source_id!r} registered with conflicting HTTP identity")
+        self._source_policies[source_id] = policy
+
+    def _source_session(self, source_id: str | None) -> AsyncSession:
+        if source_id is None:
+            return self._session
+        if session := self._source_sessions.get(source_id):
+            return session
+        policy = self._source_policies.get(source_id, _SourcePolicy())
+        session = AsyncSession(
+            max_clients=policy.max_concurrency or self._max_clients,
+            verify=False,
+            max_redirects=20,
+            timeout=policy.timeout or self._timeout,
+            impersonate=random.choice(_IMPERSONATE_OPTIONS),
+            headers=policy.headers,
+            cookies=policy.cookies,
+        )
+        self._source_sessions[source_id] = session
+        return session
 
     async def request(
         self,
@@ -200,13 +287,51 @@ class WebClient:
         timeout: float | None = None,
         allow_redirects: bool = True,
         ok_statuses: frozenset[int] | None = None,
+        source_id: str | None = None,
+        _coalesce: bool = True,
     ) -> Response:
         """``ok_statuses`` 额外视为成功 (例如 RSS 304), 不重试、不当失败. 重试用尽后抛 ``RequestError``."""
+        if _coalesce and method == "GET" and data is None and json is None:
+            key = (
+                source_id,
+                method,
+                url,
+                tuple(sorted((headers or {}).items())),
+                tuple(sorted((cookies or {}).items())),
+                use_proxy,
+                timeout,
+            )
+            if pending := self._inflight.get(key):
+                return await asyncio.shield(pending)
+            pending = asyncio.create_task(
+                self.request(
+                    method,
+                    url,
+                    headers=headers,
+                    cookies=cookies,
+                    data=data,
+                    json=json,
+                    use_proxy=use_proxy,
+                    timeout=timeout,
+                    allow_redirects=allow_redirects,
+                    ok_statuses=ok_statuses,
+                    source_id=source_id,
+                    _coalesce=False,
+                )
+            )
+            self._inflight[key] = pending
+            try:
+                return await asyncio.shield(pending)
+            finally:
+                if self._inflight.get(key) is pending:
+                    self._inflight.pop(key, None)
+
         host = httpx.URL(url).host.rstrip(".")
-        self.raise_if_blocked(url)
+        self.raise_if_blocked(url, source_id=source_id)
         if host == "fc2ppvdb.com" or host.endswith(".fc2ppvdb.com"):
             raise RequestError(url, RequestFailure(kind=FailureKind.HTTP_STATUS, status=410, message="retired source"))
-        if method == "GET" and self._not_found.get(url, 0) > time.monotonic():
+        cache_key = f"{source_id or '<shared>'}:{url}"
+        if method == "GET" and self._not_found.get(cache_key, 0) > time.monotonic():
             raise RequestError(
                 url, RequestFailure(kind=FailureKind.HTTP_STATUS, status=404, message="cached not found")
             )
@@ -214,7 +339,10 @@ class WebClient:
         t0 = time.monotonic()
         failure: RequestFailure | None = None
         last_resp: Response | None = None
-        attempts = max(1, self._max_retries)
+        secrets = self._source_secrets(source_id)
+        safe_log_url = _redact_values(url, secrets)
+        policy = self._source_policies.get(source_id) if source_id is not None else None
+        attempts = max(1, policy.max_retries if policy and policy.max_retries is not None else self._max_retries)
         for attempt in range(attempts):
             should_retry = False
             try:
@@ -228,12 +356,13 @@ class WebClient:
                     use_proxy=use_proxy,
                     timeout=timeout,
                     allow_redirects=allow_redirects,
+                    source_id=source_id,
                 )
                 last_resp = resp
                 if method == "GET" and resp.status_code == 404 and self._negative_cache_ttl:
                     now = time.monotonic()
                     self._not_found = {key: expiry for key, expiry in self._not_found.items() if expiry > now}
-                    self._not_found[url] = now + self._negative_cache_ttl
+                    self._not_found[cache_key] = now + self._negative_cache_ttl
 
                 extra_ok = ok_statuses or frozenset()
                 if (
@@ -241,7 +370,8 @@ class WebClient:
                     or resp.status_code in extra_ok
                     or (resp.status_code in (301, 302, 307, 308) and resp.headers.get("Location"))
                 ):
-                    self._record_exchange(method, resp.url or url, resp=resp, error=None, t0=t0)
+                    self._record_exchange(method, resp.url or url, resp=resp, error=None, t0=t0, source_id=source_id)
+                    self._mark_source_success(source_id)
                     return resp
 
                 failure = RequestFailure(
@@ -253,9 +383,21 @@ class WebClient:
                 should_retry = resp.status_code in _RETRYABLE_STATUS_CODES
 
             except RequestError as exc:
-                if exc.blocked and exc.failure is not None:
+                if source_id is None and exc.blocked and exc.failure is not None:
                     self._blocked_hosts[host] = exc.failure
-                raise
+                if not secrets:
+                    raise
+                safe_failure = (
+                    RequestFailure(
+                        kind=exc.failure.kind,
+                        status=exc.failure.status,
+                        message=_redact_values(exc.failure.message, secrets),
+                        body=_redact_bytes(exc.failure.body, secrets),
+                    )
+                    if exc.failure is not None
+                    else None
+                )
+                raise RequestError(safe_log_url, safe_failure) from None
             except CurlError as e:
                 failure = RequestFailure(kind=FailureKind.CURL, message=f"curl error: {e}")
                 should_retry = True
@@ -272,14 +414,18 @@ class WebClient:
                 break
 
             if attempt < attempts - 1:
+                if not consume_retry_budget():
+                    logger.warning("task retry budget exhausted", source=source_id, url=safe_log_url)
+                    break
                 retry_after = _retry_after(last_resp.headers.get("Retry-After")) if last_resp else 0.0
                 if retry_after > self._retry_max_wait:
                     break
                 wait = max(retry_after, min(self._retry_max_wait, self._retry_backoff * 2**attempt))
+                wait += random.uniform(0, min(wait * 0.25, 1.0))
                 logger.warning(
                     "request retry",
                     method=method,
-                    url=url,
+                    url=safe_log_url,
                     attempt=attempt + 1,
                     max_retries=self._max_retries,
                     error=failure.message,
@@ -291,15 +437,32 @@ class WebClient:
         log_failed(
             "request failed",
             method=method,
-            url=url,
-            error=failure.message if failure else None,
+            url=safe_log_url,
+            error=_redact_values(failure.message, secrets) if failure else None,
             attempts=attempt + 1,
             duration_s=round(time.monotonic() - t0, 2),
         )
         self._record_exchange(
-            method, url, resp=last_resp, error=failure.message if failure else None, t0=t0, attempts=attempt + 1
+            method,
+            url,
+            resp=last_resp,
+            error=failure.message if failure else None,
+            t0=t0,
+            attempts=attempt + 1,
+            source_id=source_id,
         )
-        raise RequestError(url, failure)
+        self._mark_source_failure(source_id, failure)
+        safe_failure = (
+            RequestFailure(
+                kind=failure.kind,
+                status=failure.status,
+                message=_redact_values(failure.message, secrets),
+                body=_redact_bytes(failure.body, secrets),
+            )
+            if failure is not None
+            else None
+        )
+        raise RequestError(safe_log_url, safe_failure)
 
     async def _request_hops(
         self,
@@ -313,15 +476,21 @@ class WebClient:
         use_proxy: bool,
         timeout: float | None,
         allow_redirects: bool,
+        source_id: str | None,
     ) -> Response:
         for _ in range(21):
             host = (urlsplit(url).hostname or "").rstrip(".")
-            self.raise_if_blocked(url)
+            self.raise_if_blocked(url, source_id=source_id)
             if host == "fc2ppvdb.com" or host.endswith(".fc2ppvdb.com"):
                 raise RequestError(
                     url, RequestFailure(kind=FailureKind.HTTP_STATUS, status=410, message="retired source")
                 )
-            slots = self._host_slots.setdefault(host, asyncio.Semaphore(self._host_concurrency))
+            policy = self._source_policies.get(source_id) if source_id is not None else None
+            concurrency = (
+                policy.max_concurrency if policy and policy.max_concurrency is not None else self._host_concurrency
+            )
+            slot_key = source_id or host
+            slots = self._source_slots.setdefault(slot_key, asyncio.Semaphore(concurrency))
             async with slots:
                 remaining = self._host_cooldown.get(host, 0) - time.monotonic()
                 if remaining > 0:
@@ -330,15 +499,16 @@ class WebClient:
                     )
                 limiter = self._limiters.get(host)
                 # 抖动围绕额外等待变化, 不突破最短请求间隔.
-                if self._request_jitter:
-                    await asyncio.sleep(random.uniform(0, 2 * self._request_jitter) * limiter.time_period)
+                jitter = policy.request_jitter if policy and policy.request_jitter is not None else self._request_jitter
+                if jitter:
+                    await asyncio.sleep(random.uniform(0, 2 * jitter) * limiter.time_period)
                 await limiter.acquire()
-                self.raise_if_blocked(url)
+                self.raise_if_blocked(url, source_id=source_id)
                 if self._host_cooldown.get(host, 0) > time.monotonic():
                     raise RequestError(
                         url, RequestFailure(kind=FailureKind.HTTP_STATUS, status=429, message="host cooling down")
                     )
-                resp = await self._session.request(
+                resp = await self._source_session(source_id).request(
                     method,
                     url,
                     headers=headers,
@@ -346,14 +516,13 @@ class WebClient:
                     data=data,
                     json=json,
                     proxy=self._proxy if use_proxy else None,
-                    timeout=timeout or self._timeout,
+                    timeout=timeout or (policy.timeout if policy else None) or self._timeout,
                     allow_redirects=False,
                 )
                 body = _failure_body(resp)
-                reason = (
-                    classify_block(body.decode("utf-8", errors="replace"))
-                    if body and (b"cloudflare" in body.lower() or b"ray-id" in body.lower())
-                    else None
+                reason = classify_block(body.decode("utf-8", errors="replace")) if body else None
+                cloudflare_headers = (
+                    bool(resp.headers.get("cf-ray")) or "cloudflare" in resp.headers.get("server", "").lower()
                 )
                 if (
                     resp.status_code == 403
@@ -363,6 +532,10 @@ class WebClient:
                         FailureReason.CLOUDFLARE_BLOCKED,
                     }
                     or resp.headers.get("cf-mitigated") == "challenge"
+                    or (
+                        cloudflare_headers
+                        and reason in {FailureReason.CLOUDFLARE_CHALLENGE, FailureReason.CLOUDFLARE_BLOCKED}
+                    )
                 ):
                     failure = RequestFailure(
                         kind=FailureKind.HTTP_STATUS,
@@ -370,9 +543,18 @@ class WebClient:
                         message="BLOCKED: source access denied",
                         body=body if reason or resp.status_code == 403 else b"Just a moment cloudflare",
                     )
-                    self._blocked_hosts[host] = failure
+                    if source_id is None:
+                        self._blocked_hosts[host] = failure
+                    self._mark_source_failure(source_id, failure, blocked=True)
                     logger.warning("source BLOCKED", host=host, status=resp.status_code)
-                    self._record_exchange(method, url, resp=resp, error=failure.message, t0=time.monotonic())
+                    self._record_exchange(
+                        method,
+                        url,
+                        resp=resp,
+                        error=failure.message,
+                        t0=time.monotonic(),
+                        source_id=source_id,
+                    )
                     raise RequestError(url, failure)
                 if resp.status_code == 429:
                     delay = max(_retry_after(resp.headers.get("Retry-After")), self._retry_backoff)
@@ -395,11 +577,60 @@ class WebClient:
             url = target
         raise RequestError(url, RequestFailure(kind=FailureKind.UNEXPECTED, message="redirect limit exceeded"))
 
-    def raise_if_blocked(self, url: str) -> None:
+    def raise_if_blocked(self, url: str, *, source_id: str | None = None) -> None:
         """受限主机在当前客户端生命周期内停止请求, 包括排队请求与重定向."""
+        if source_id is not None:
+            health = self._source_health.setdefault(source_id, _SourceHealth())
+            now = time.monotonic()
+            if health.cooldown_until > now:
+                raise RequestError(
+                    url,
+                    RequestFailure(
+                        kind=FailureKind.COOLDOWN,
+                        message=f"source cooling down for {max(1, int(health.cooldown_until - now))}s",
+                    ),
+                )
+            if health.cooldown_until and health.failure is not None:
+                current_task = asyncio.current_task()
+                if health.probe_task is not None and health.probe_task is not current_task:
+                    raise RequestError(
+                        url,
+                        RequestFailure(kind=FailureKind.COOLDOWN, message="source half-open probe in progress"),
+                    )
+                health.probe_task = current_task
+            return
         host = (urlsplit(url).hostname or "").rstrip(".")
         if failure := self._blocked_hosts.get(host):
             raise RequestError(url, failure)
+
+    def _mark_source_success(self, source_id: str | None) -> None:
+        if source_id is None:
+            return
+        self._source_health[source_id] = _SourceHealth()
+
+    def _mark_source_failure(
+        self, source_id: str | None, failure: RequestFailure | None, *, blocked: bool = False
+    ) -> None:
+        if source_id is None or failure is None:
+            return
+        reason = RequestError("", failure).reason
+        health = self._source_health.setdefault(source_id, _SourceHealth())
+        health.consecutive_failures += 1
+        health.probe_task = None
+        policy = self._source_policies.get(source_id, _SourcePolicy())
+        if blocked:
+            delay = policy.blocked_cooldown
+        elif reason == FailureReason.RATE_LIMITED:
+            delay = max(policy.failure_cooldown, self._retry_backoff)
+        elif (
+            reason in {FailureReason.TIMEOUT, FailureReason.NETWORK, FailureReason.SERVER_ERROR}
+            and health.consecutive_failures >= 2
+        ):
+            delay = policy.failure_cooldown
+        else:
+            return
+        health.failure = failure
+        health.cooldown_until = time.monotonic() + delay
 
     async def download_image(self, url: str, dest: Path) -> bool:
         """HEAD 不受支持时继续 GET; 拒绝响应与挑战不重试."""
@@ -426,6 +657,7 @@ class WebClient:
         error: str | None,
         t0: float,
         attempts: int | None = None,
+        source_id: str | None = None,
     ) -> None:
         rec = get_bound_http_recorder()
         if rec is None:
@@ -440,16 +672,34 @@ class WebClient:
                 body = resp.content
             except Exception:
                 body = None
+        secrets = self._source_secrets(source_id)
+        safe_url = _redact_values(str(url), secrets)
+        safe_error = _redact_values(error, secrets) if error is not None else None
+        safe_body = _redact_bytes(body, secrets)
         rec.record_http(
             method=str(method),
-            url=url,
+            url=safe_url,
             status=status,
-            error=error,
+            error=safe_error,
             content_type=content_type,
-            body=body,
+            body=safe_body,
             elapsed_ms=int((time.monotonic() - t0) * 1000),
             attempts=attempts,
         )
+
+    def _source_secrets(self, source_id: str | None) -> tuple[str, ...]:
+        if source_id is None:
+            return ()
+        policy = self._source_policies.get(source_id)
+        if policy is None:
+            return ()
+        values = [value for value in policy.cookies.values() if value]
+        values.extend(
+            value
+            for key, value in policy.headers.items()
+            if value and any(part in key.lower() for part in ("authorization", "cookie", "token", "secret"))
+        )
+        return tuple(dict.fromkeys(values))
 
     async def get_text(
         self,
@@ -459,8 +709,20 @@ class WebClient:
         cookies: dict[str, str] | None = None,
         encoding: str = "utf-8",
         use_proxy: bool = True,
+        source_id: str | None = None,
+        expected_content_types: tuple[str, ...] | None = None,
     ) -> str:
-        resp = await self.request("GET", url, headers=headers, cookies=cookies, use_proxy=use_proxy)
+        resp = await self.request(
+            "GET", url, headers=headers, cookies=cookies, use_proxy=use_proxy, source_id=source_id
+        )
+        content_type = resp.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
+        if content_type and expected_content_types and content_type not in expected_content_types:
+            raise SourceError(
+                FailureReason.INVALID_CONTENT_TYPE,
+                http_status=resp.status_code,
+                detail=f"unexpected content type: {content_type}",
+                url=url,
+            )
         try:
             resp.encoding = encoding
             return resp.text
@@ -474,8 +736,11 @@ class WebClient:
         headers: dict[str, str] | None = None,
         cookies: dict[str, str] | None = None,
         use_proxy: bool = True,
+        source_id: str | None = None,
     ) -> Any:
-        resp = await self.request("GET", url, headers=headers, cookies=cookies, use_proxy=use_proxy)
+        resp = await self.request(
+            "GET", url, headers=headers, cookies=cookies, use_proxy=use_proxy, source_id=source_id
+        )
         try:
             return resp.json()
         except Exception as e:
@@ -490,9 +755,12 @@ class WebClient:
         headers: dict[str, str] | None = None,
         cookies: dict[str, str] | None = None,
         use_proxy: bool = True,
+        source_id: str | None = None,
     ) -> bytes:
         with _skip_body_recording():
-            resp = await self.request("GET", url, headers=headers, cookies=cookies, use_proxy=use_proxy)
+            resp = await self.request(
+                "GET", url, headers=headers, cookies=cookies, use_proxy=use_proxy, source_id=source_id
+            )
         return resp.content
 
     async def post_text(
@@ -524,9 +792,17 @@ class WebClient:
         headers: dict[str, str] | None = None,
         cookies: dict[str, str] | None = None,
         use_proxy: bool = True,
+        source_id: str | None = None,
     ) -> Any:
         resp = await self.request(
-            "POST", url, data=data, json=json, headers=headers, cookies=cookies, use_proxy=use_proxy
+            "POST",
+            url,
+            data=data,
+            json=json,
+            headers=headers,
+            cookies=cookies,
+            use_proxy=use_proxy,
+            source_id=source_id,
         )
         try:
             return resp.json()
@@ -632,10 +908,13 @@ class WebClient:
         return True
 
     async def close(self) -> None:
-        try:
-            await self._session.close()
-        except Exception as e:
-            logger.debug("session close error (ignored)", error=str(e))
+        sessions = [self._session, *self._source_sessions.values()]
+        self._source_sessions.clear()
+        for session in sessions:
+            try:
+                await session.close()
+            except Exception as e:
+                logger.debug("session close error (ignored)", error=str(e))
 
 
 class BrowserClient:
