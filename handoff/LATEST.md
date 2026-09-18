@@ -2,9 +2,9 @@
 
 更新时间: 2026-09-18
 
-当前工作分支 `codex/source-session-resilience` 已完成 FC2 字段级多源回退实现与隔离 NAS 验收。实现保留现有 FC2CMADB、FD2PPV、cookie、共享 WebClient 和 host RateLimiters，新增 PPVDataBank、FC2DB、Fourhoi、Paipancon 独立来源；Aggregator 只访问仍有字段缺口的来源，低优先级结果不覆盖已有值，图片失败不使 metadata scrape 失败。详细架构、四源实际观测、HTTP 状态、测试边界和改造前后命中率见 [FC2 字段级多源回退验收](reports/fc2-field-fallback-20260918.md)。
+当前工作分支 `codex/source-session-resilience` 已完成 FC2 字段级多源回退实现，并完成生产灰度验收。生产镜像基于 `7ddfc8a53840f4e39d5c1029a4b39638a6b14e09` 构建；Amane 健康、worker、数据库、媒体库 API 和 ResourceStore 写入均正常，媒体文件未发生变化。两个历史缺图样本由 PPVDataBank 补充字段并完成任务，但用户指定的 `3193265`、`4974556`、`4601311` 不在当前生产数据库中，因此总体状态为 `PARTIAL`，不能标记为 `PRODUCTION VERIFIED`。
 
-生产 `Amane` 未替换、未重启，未删除或移动影片；隔离候选使用临时数据库且未挂载生产数据或媒体目录。2026-09-18 验收后生产健康接口仍为 HTTP 200。
+生产报告见 [FC2 字段级多源回退生产灰度验收](reports/fc2-field-fallback-production-20260918.md)；隔离候选与来源审计见 [FC2 字段级多源回退验收](reports/fc2-field-fallback-20260918.md)。FC2DB 年龄确认、Fourhoi 403、Paipancon miss 和 actor 缺失保持为后续独立事项。
 
 ---
 
