@@ -157,7 +157,7 @@ def _classify_text(text: str) -> FailureReason | None:
         return FailureReason.AGE_VERIFICATION
     # 年龄验证仅检查可见文本, 排除脚本翻译字典与属性.
     page_text = " ".join(Selector(text=text).xpath("//text()[not(ancestor::script or ancestor::style)]").getall())
-    if "年齢認証" in page_text or "age verification" in page_text.lower():
+    if "年齢認証" in page_text or "年齢確認" in page_text or "age verification" in page_text.lower():
         return FailureReason.AGE_VERIFICATION
     selector = Selector(text=text)
     title = " ".join(selector.xpath("//title/text()").getall()).strip().lower()

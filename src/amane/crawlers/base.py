@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import structlog
 
-from ..enums import ActorGender
+from ..enums import ActorGender, MetadataField
 from ..plugins.models import SourceCapability
 from .http import HttpClient
 
@@ -35,6 +35,8 @@ class CrawlerProfile:
     genders: frozenset[ActorGender] | None = None
     # True 时刮削前按需计算 oshash. 默认不在扫描期算.
     uses_file_hash: bool = False
+    # None 表示可能提供任意影片字段; 显式集合用于从字段抓取图排除无能力来源.
+    provided_fields: frozenset[MetadataField] | None = None
 
     def effective_capabilities(self) -> frozenset[SourceCapability]:
         return self.capabilities or frozenset({SourceCapability.FILM_METADATA})
@@ -78,6 +80,10 @@ class Crawler(ABC):
         self.headers.update(self.config.headers)
         if self.config.user_agent:
             self.headers["User-Agent"] = self.config.user_agent
+
+    @property
+    def provided_fields(self) -> frozenset[MetadataField] | None:
+        return self._profile.provided_fields
 
     @property
     def logger(self) -> structlog.stdlib.BoundLogger:

@@ -118,14 +118,18 @@ async def test_artwork_only_source_cannot_overwrite_metadata(
     priorities = {field: ["primary"] for field in ALL_FIELDS}
     priorities[MetadataField.POSTER_URLS] = ["primary", "fallback"]
     result = await aggregate(SearchQuery("TEST-001"), crawlers, priorities, defer_artwork=True)
-    before = result.metadata.title, result.metadata.tags, result.field_sources.copy(), result.raw.copy()
+    before = result.metadata.title, result.metadata.tags, result.field_sources.copy()
     assert main.calls == 1 and fallback.calls == 0
     art = await rescue_artwork(
         SearchQuery("TEST-001"), result, crawlers, priorities, resource_store, image_http.client, thumb=False
     )
     assert art.poster_urls == [url]
     assert fallback.calls == (0 if main_valid else 1)
-    assert (result.metadata.title, result.metadata.tags, result.field_sources, result.raw) == before
+    assert (result.metadata.title, result.metadata.tags, result.field_sources) == before
+    if main_valid:
+        assert "fallback" not in result.raw
+    else:
+        assert result.raw["fallback"]["title"] == "Untrusted"
     assert await resource_store.resolve(url) is not None
 
 
@@ -168,3 +172,38 @@ async def test_same_failed_candidate_not_retried_across_fields(
     art = await rescue_artwork(query, result, crawlers, priorities, resource_store, image_http.client)
     assert art.poster_urls == art.thumb_urls == [good, bad]
     assert image_http.calls == [("HEAD", bad), ("GET", bad), ("HEAD", good), ("GET", good)]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("primary_valid", [True, False])
+async def test_extrafanart_fallback_only_when_higher_priority_has_no_valid_image(
+    resource_store: ResourceStore, image_http: ImageHTTP, primary_valid: bool
+) -> None:
+    primary_url = "https://images.example/primary-extra"
+    fallback_url = "https://images.example/fallback-extra"
+    image_http.add(primary_url, body=image_bytes() if primary_valid else b"not an image")
+    image_http.add(fallback_url)
+    primary = ArtworkCrawler(MediaMetadata(number="TEST-001", title="Confirmed", extrafanart=[primary_url]))
+    fallback = ArtworkCrawler(MediaMetadata(number="TEST-001", extrafanart=[fallback_url]))
+    crawlers: dict[str, CrawlerLike] = {"primary": primary, "fallback": fallback}
+    priorities = {field: ["primary"] for field in ALL_FIELDS}
+    priorities[MetadataField.EXTRAFANART] = ["primary", "fallback"]
+    query = SearchQuery("TEST-001")
+    result = await aggregate(query, crawlers, priorities, defer_artwork=True)
+    artwork = await rescue_artwork(
+        query,
+        result,
+        crawlers,
+        priorities,
+        resource_store,
+        image_http.client,
+        poster=False,
+        thumb=False,
+    )
+    assert fallback.calls == (0 if primary_valid else 1)
+    assert artwork.extrafanart_urls["primary"] == [primary_url]
+    if primary_valid:
+        assert "fallback" not in artwork.extrafanart_urls
+    else:
+        assert artwork.extrafanart_urls["fallback"] == [fallback_url]
+        assert result.raw["fallback"]["extrafanart"] == [fallback_url]

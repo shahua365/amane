@@ -108,6 +108,7 @@ class TestCrawlerBase:
         ("redirecting... driver-verify", None, True),
         # Age verification page (Japanese)
         ("年齢認証が必要です", None, True),
+        ("年齢確認", None, True),
         # Age verification page (English)
         ("This site requires age verification", None, True),
         # Normal responses

@@ -225,13 +225,26 @@ class TestScrapingPriorityMigration:
         assert cfg.content_routes[ContentType.FC2] == ScrapingConfig().content_routes[ContentType.FC2]
 
     def test_default_routes_type_specific_heads(self):
-        routes = ScrapingConfig().content_routes
+        config = ScrapingConfig()
+        routes = config.content_routes
         assert routes[ContentType.AMATEUR][0] == SiteName.MGSTAGE
         assert routes[ContentType.CHINESE][0] == SiteName.IQQTV
         assert routes[ContentType.HENTAI][0] == SiteName.GETCHU
         assert routes[ContentType.WESTERN][0] == SiteName.THEPORNDB
         assert SiteName.AVSOX in routes[ContentType.UNCENSORED]
-        assert SiteName.FC2CMADB in routes[ContentType.FC2]
+        assert routes[ContentType.FC2][:6] == [
+            SiteName.FC2CMADB,
+            SiteName.FD2PPV,
+            SiteName.PPVDATABANK,
+            SiteName.FC2DB,
+            SiteName.FOURHOI,
+            SiteName.PAIPANCON,
+        ]
+        for site in (SiteName.PPVDATABANK, SiteName.FC2DB, SiteName.FOURHOI, SiteName.PAIPANCON):
+            source = config.site_config[str(site)]
+            assert source.rate_limit == 0.5
+            assert source.use_browser is False
+            assert source.cookie == {}
         assert SiteName.OFFICIAL in routes[ContentType.CENSORED]
 
 

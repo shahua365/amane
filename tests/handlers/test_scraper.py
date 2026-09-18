@@ -192,7 +192,7 @@ class TestScrapeHandler:
             async def get_filesize(self, url, **kwargs):
                 return None
 
-            async def download_image(self, url, dest) -> bool:
+            async def download_image(self, url, dest, **kwargs) -> bool:
                 return await self.download(url, dest)
 
         h = ScrapeHandler(

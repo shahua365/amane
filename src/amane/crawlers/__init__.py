@@ -22,7 +22,9 @@ from .sites import (
     FC2ClubCrawler,
     FC2CMADBCrawler,
     FC2Crawler,
+    FC2DBCrawler,
     FD2PPVCrawler,
+    FourhoiCrawler,
     FreejavbtCrawler,
     GetchuCrawler,
     GigaCrawler,
@@ -35,6 +37,8 @@ from .sites import (
     Kin8Crawler,
     MGStageCrawler,
     OfficialCrawler,
+    PaipanconCrawler,
+    PPVDataBankCrawler,
     PrestigeCrawler,
     R18DevCrawler,
     ThePornDBCrawler,
@@ -58,7 +62,9 @@ registry.register(GigaCrawler)
 registry.register(Kin8Crawler)
 registry.register(FC2ClubCrawler)
 registry.register(FC2CMADBCrawler)
+registry.register(FC2DBCrawler)
 registry.register(FD2PPVCrawler)
+registry.register(FourhoiCrawler)
 registry.register(JavArchiveCrawler)
 registry.register(GetchuCrawler)
 registry.register(IqqtvCrawler)
@@ -66,6 +72,8 @@ registry.register(PrestigeCrawler)
 registry.register(R18DevCrawler)
 registry.register(ThePornDBCrawler)
 registry.register(OfficialCrawler)
+registry.register(PaipanconCrawler)
+registry.register(PPVDataBankCrawler)
 
 # 演员站在 amane.crawlers.actor 导入时注册.
 
@@ -80,10 +88,12 @@ __all__ = [
     "FC2CMADBCrawler",
     "FC2ClubCrawler",
     "FC2Crawler",
+    "FC2DBCrawler",
     "FD2PPVCrawler",
     "FalenoCrawler",
     "FetchOptions",
     "FilmActor",
+    "FourhoiCrawler",
     "FreejavbtCrawler",
     "GFriendsActorCrawler",
     "GetchuCrawler",
@@ -103,6 +113,8 @@ __all__ = [
     "MetadataField",
     "MinnanoActorCrawler",
     "OfficialCrawler",
+    "PPVDataBankCrawler",
+    "PaipanconCrawler",
     "PrestigeCrawler",
     "R18DevCrawler",
     "SiteName",

@@ -2166,11 +2166,15 @@ export const HotSettingsSchema = {
                         'freejavbt'
                     ],
                     fc2: [
+                        'fc2cmadb',
+                        'fd2ppv',
+                        'ppvdatabank',
+                        'fc2db',
+                        'fourhoi',
+                        'paipancon',
                         'fc2',
                         'javarchive',
                         'javdb',
-                        'fc2cmadb',
-                        'fd2ppv',
                         'freejavbt'
                     ],
                     hentai: [
@@ -2190,7 +2194,63 @@ export const HotSettingsSchema = {
                         'freejavbt'
                     ]
                 },
-                field_priority: {},
+                field_priority: {
+                    actors: [
+                        'fc2cmadb',
+                        'fd2ppv',
+                        'ppvdatabank',
+                        'fc2db'
+                    ],
+                    extrafanart: [
+                        'fd2ppv',
+                        'ppvdatabank',
+                        'paipancon'
+                    ],
+                    poster_urls: [
+                        'fc2cmadb',
+                        'ppvdatabank',
+                        'fc2db',
+                        'fourhoi',
+                        'paipancon'
+                    ],
+                    publisher: [
+                        'fc2cmadb',
+                        'fd2ppv',
+                        'ppvdatabank',
+                        'fc2db'
+                    ],
+                    release: [
+                        'fc2cmadb',
+                        'fd2ppv',
+                        'ppvdatabank',
+                        'fc2db'
+                    ],
+                    runtime: [
+                        'fc2cmadb',
+                        'fd2ppv',
+                        'ppvdatabank',
+                        'fc2db'
+                    ],
+                    studio: [
+                        'fc2cmadb',
+                        'fd2ppv',
+                        'ppvdatabank',
+                        'fc2db'
+                    ],
+                    thumb_urls: [
+                        'fc2cmadb',
+                        'ppvdatabank',
+                        'fc2db',
+                        'fourhoi',
+                        'paipancon'
+                    ],
+                    title: [
+                        'fc2cmadb',
+                        'fd2ppv',
+                        'ppvdatabank',
+                        'fc2db'
+                    ]
+                },
                 field_blacklist: {},
                 field_language: {
                     actors: 'zh_cn',
@@ -2267,11 +2327,27 @@ export const HotSettingsSchema = {
                         use_browser: false,
                         use_proxy: true
                     },
+                    fc2db: {
+                        cookie: {},
+                        headers: {},
+                        official_routes: {},
+                        rate_limit: 0.5,
+                        use_browser: false,
+                        use_proxy: true
+                    },
                     fd2ppv: {
                         cookie: {},
                         headers: {},
                         official_routes: {},
                         rate_limit: 0.05,
+                        use_browser: false,
+                        use_proxy: true
+                    },
+                    fourhoi: {
+                        cookie: {},
+                        headers: {},
+                        official_routes: {},
+                        rate_limit: 0.5,
                         use_browser: false,
                         use_proxy: true
                     },
@@ -2380,6 +2456,22 @@ export const HotSettingsSchema = {
                         use_proxy: true
                     },
                     official: {
+                        cookie: {},
+                        headers: {},
+                        official_routes: {},
+                        rate_limit: 0.5,
+                        use_browser: false,
+                        use_proxy: true
+                    },
+                    paipancon: {
+                        cookie: {},
+                        headers: {},
+                        official_routes: {},
+                        rate_limit: 0.5,
+                        use_browser: false,
+                        use_proxy: true
+                    },
+                    ppvdatabank: {
                         cookie: {},
                         headers: {},
                         official_routes: {},
@@ -5935,7 +6027,9 @@ export const ScrapingConfigSchema = {
                         'fc2',
                         'fc2club',
                         'fc2cmadb',
+                        'fc2db',
                         'fd2ppv',
+                        'fourhoi',
                         'freejavbt',
                         'getchu',
                         'giga',
@@ -5948,6 +6042,8 @@ export const ScrapingConfigSchema = {
                         'kin8',
                         'mgstage',
                         'official',
+                        'paipancon',
+                        'ppvdatabank',
                         'prestige',
                         'r18dev',
                         'theporndb',
@@ -5977,7 +6073,9 @@ export const ScrapingConfigSchema = {
                         'fc2',
                         'fc2club',
                         'fc2cmadb',
+                        'fc2db',
                         'fd2ppv',
+                        'fourhoi',
                         'freejavbt',
                         'getchu',
                         'giga',
@@ -5990,6 +6088,8 @@ export const ScrapingConfigSchema = {
                         'kin8',
                         'mgstage',
                         'official',
+                        'paipancon',
+                        'ppvdatabank',
                         'prestige',
                         'r18dev',
                         'theporndb',
@@ -6019,7 +6119,9 @@ export const ScrapingConfigSchema = {
                         'fc2',
                         'fc2club',
                         'fc2cmadb',
+                        'fc2db',
                         'fd2ppv',
+                        'fourhoi',
                         'freejavbt',
                         'getchu',
                         'giga',
@@ -6032,6 +6134,8 @@ export const ScrapingConfigSchema = {
                         'kin8',
                         'mgstage',
                         'official',
+                        'paipancon',
+                        'ppvdatabank',
                         'prestige',
                         'r18dev',
                         'theporndb',
@@ -6253,7 +6357,9 @@ export const SiteNameSchema = {
         'fc2',
         'fc2club',
         'fc2cmadb',
+        'fc2db',
         'fd2ppv',
+        'fourhoi',
         'freejavbt',
         'getchu',
         'gfriends',
@@ -6268,6 +6374,8 @@ export const SiteNameSchema = {
         'mgstage',
         'minnano',
         'official',
+        'paipancon',
+        'ppvdatabank',
         'prestige',
         'r18dev',
         'theporndb',

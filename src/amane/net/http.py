@@ -257,7 +257,7 @@ class WebClient:
         self._source_policies[source_id] = policy
 
     def _source_session(self, source_id: str | None) -> AsyncSession:
-        if source_id is None:
+        if source_id is None or source_id not in self._source_policies:
             return self._session
         if session := self._source_sessions.get(source_id):
             return session
@@ -632,15 +632,15 @@ class WebClient:
         health.failure = failure
         health.cooldown_until = time.monotonic() + delay
 
-    async def download_image(self, url: str, dest: Path) -> bool:
+    async def download_image(self, url: str, dest: Path, *, source_id: str | None = None) -> bool:
         """HEAD 不受支持时继续 GET; 拒绝响应与挑战不重试."""
         try:
-            head = await self.request("HEAD", url, ok_statuses=frozenset({405, 501}))
+            head = await self.request("HEAD", url, ok_statuses=frozenset({405, 501}), source_id=source_id)
             if head.status_code < 300:
                 length = head.headers.get("Content-Length", "")
                 if length.isdigit() and int(length) > 32 * 1024**2:
                     return False
-            content = await self.get_bytes(url)
+            content = await self.get_bytes(url, source_id=source_id)
             if not content or len(content) > 32 * 1024**2:
                 return False
             await asyncio.to_thread(dest.write_bytes, content)

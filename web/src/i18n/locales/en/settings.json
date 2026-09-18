@@ -99,8 +99,12 @@
             "wikipedia": "wikipedia",
             "xcity": "xcity",
             "fc2cmadb": "FC2CMADB",
+            "fc2db": "FC2DB",
             "fd2ppv": "FD2PPV",
-            "javarchive": "JavArchive"
+            "fourhoi": "Fourhoi",
+            "javarchive": "JavArchive",
+            "paipancon": "Paipancon",
+            "ppvdatabank": "PPVDataBank"
           },
           "$": {
             "options": {
@@ -130,8 +134,12 @@
               "wikipedia": "wikipedia",
               "xcity": "xcity",
               "fc2cmadb": "FC2CMADB",
+              "fc2db": "FC2DB",
               "fd2ppv": "FD2PPV",
-              "javarchive": "JavArchive"
+              "fourhoi": "Fourhoi",
+              "javarchive": "JavArchive",
+              "paipancon": "Paipancon",
+              "ppvdatabank": "PPVDataBank"
             }
           }
         }
@@ -184,8 +192,12 @@
             "wikipedia": "wikipedia",
             "xcity": "xcity",
             "fc2cmadb": "FC2CMADB",
+            "fc2db": "FC2DB",
             "fd2ppv": "FD2PPV",
-            "javarchive": "JavArchive"
+            "fourhoi": "Fourhoi",
+            "javarchive": "JavArchive",
+            "paipancon": "Paipancon",
+            "ppvdatabank": "PPVDataBank"
           },
           "$": {
             "options": {
@@ -215,8 +227,12 @@
               "wikipedia": "wikipedia",
               "xcity": "xcity",
               "fc2cmadb": "FC2CMADB",
+              "fc2db": "FC2DB",
               "fd2ppv": "FD2PPV",
-              "javarchive": "JavArchive"
+              "fourhoi": "Fourhoi",
+              "javarchive": "JavArchive",
+              "paipancon": "Paipancon",
+              "ppvdatabank": "PPVDataBank"
             }
           }
         }
@@ -279,8 +295,12 @@
           "wikipedia": "wikipedia",
           "xcity": "xcity",
           "fc2cmadb": "FC2CMADB",
+          "fc2db": "FC2DB",
           "fd2ppv": "FD2PPV",
-          "javarchive": "JavArchive"
+          "fourhoi": "Fourhoi",
+          "javarchive": "JavArchive",
+          "paipancon": "Paipancon",
+          "ppvdatabank": "PPVDataBank"
         },
         "$": {
           "base_url": {
@@ -418,8 +438,12 @@
             "wikipedia": "wikipedia",
             "xcity": "xcity",
             "fc2cmadb": "FC2CMADB",
+            "fc2db": "FC2DB",
             "fd2ppv": "FD2PPV",
-            "javarchive": "JavArchive"
+            "fourhoi": "Fourhoi",
+            "javarchive": "JavArchive",
+            "paipancon": "Paipancon",
+            "ppvdatabank": "PPVDataBank"
           },
           "$": {
             "options": {
@@ -449,8 +473,12 @@
               "wikipedia": "wikipedia",
               "xcity": "xcity",
               "fc2cmadb": "FC2CMADB",
+              "fc2db": "FC2DB",
               "fd2ppv": "FD2PPV",
-              "javarchive": "JavArchive"
+              "fourhoi": "Fourhoi",
+              "javarchive": "JavArchive",
+              "paipancon": "Paipancon",
+              "ppvdatabank": "PPVDataBank"
             }
           }
         }

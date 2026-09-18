@@ -12,6 +12,7 @@ from ..enums import ActorGender, DownloadableResource, MetadataField
 from ..media import materialize_images
 from ..media.artwork import rescue_artwork
 from ..observability import current
+from ..parsing import ContentType
 from ._common import ensure_oshash, finalize_media_file
 from .models import ActorScrapePayload, CacheKind, ScrapePayload, ScrapeResult
 from .protocol import FollowupTask, TaskHandler, TaskResult
@@ -25,6 +26,17 @@ if TYPE_CHECKING:
 
 # 进度: 聚合按已满足标量字段计数; 其后固定两步 (物化图片 / 持久化).
 _PROGRESS_POST_STEPS = 2
+
+_FC2_FALLBACK_FIELDS = frozenset(
+    {
+        MetadataField.TITLE,
+        MetadataField.ACTORS,
+        MetadataField.RELEASE,
+        MetadataField.RUNTIME,
+        MetadataField.STUDIO,
+        MetadataField.PUBLISHER,
+    }
+)
 
 
 def _crawlers_need_oshash(crawlers: Mapping[str, CrawlerLike]) -> bool:
@@ -104,6 +116,11 @@ class ScrapeHandler(TaskHandler[ScrapePayload, ScrapeResult]):
             route, self._config.scraping.field_priority, self._config.scraping.field_blacklist
         )
         field_language = self._config.scraping.field_language
+        source_fields = {
+            name: fields
+            for name, crawler in crawlers.items()
+            if isinstance(crawler, Crawler) and (fields := crawler.provided_fields) is not None
+        }
 
         await self.report_progress(0, progress_total, "fetch")
 
@@ -121,6 +138,10 @@ class ScrapeHandler(TaskHandler[ScrapePayload, ScrapeResult]):
             on_progress=_on_fetch_progress,
             multi_lang_sites=self._multi_language_sources,
             defer_artwork=self._web_client is not None,
+            source_fields=source_fields,
+            fallback_on_empty=_FC2_FALLBACK_FIELDS
+            if payload.content_type == ContentType.FC2
+            else frozenset({MetadataField.TITLE}),
         )
 
         # 站点结果已由引擎 _fetch_one 逐条上报到 summary.outcomes; 这里只记录调度顺序.
@@ -158,18 +179,22 @@ class ScrapeHandler(TaskHandler[ScrapePayload, ScrapeResult]):
                     self._resource_store,
                     self._web_client,
                     cache=db_data.raw if use_metadata_cache and db_data else None,
+                    source_fields=source_fields,
                     poster=DownloadableResource.poster in self._config.scraping.download_resources,
                     thumb=DownloadableResource.thumb in self._config.scraping.download_resources
                     or (
                         DownloadableResource.poster in self._config.scraping.download_resources
                         and self._config.scraping.crop_poster
                     ),
+                    extrafanart=DownloadableResource.extrafanart in self._config.scraping.download_resources,
                 )
                 poster_out, thumb_out = artwork.poster_urls, artwork.thumb_urls
+                trailer_out = artwork.trailer_urls
+                result.metadata.extrafanart_urls = artwork.extrafanart_urls
                 materialized = await materialize_images(
                     poster_out,
                     thumb_out,
-                    result.metadata.trailer_urls,
+                    trailer_out,
                     self._resource_store,
                     self._web_client,
                     self._config,

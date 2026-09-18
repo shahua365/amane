@@ -23,7 +23,7 @@ CrawlerFactory (缓存实例)
 
 - 演员站与影片站共用 HttpClient / 限速; 实现位于 `crawlers/actor/`, 只注册 `actor_registry` (可以不在影片 `registry`). **双料站**指同一 `SiteName` 在影片 / 演员注册表各有一个类并共用 `site_config`; 不允许在 `site_roles` 中手写双料名单.
 - gFriends 额外依赖 `data_dir` (Filetree 缓存) 与 `actor_scraping.gfriends_repo`.
-- **能力声明**位于 `CrawlerProfile`: 演员爬虫必须显式给出 `capabilities` (`ACTOR_PROFILE` / `ACTOR_IMAGE`) 与 `genders`; 影片爬虫空 `capabilities` 视为 `film_metadata`. 消费 `FetchOptions.language` 的设置 `multi_language=True`. Stash 指纹匹配站设置 `uses_file_hash=True`, 刮削前才计算 oshash, 扫描不读取文件内容. `site_roles` 只从两个注册表推导配置 schema 用的站点列表 (档案序 = 注册序); 聚合引擎只对推导出的多语言站点展开 `(site, lang)` 节点. Handler 按 `Actor.gender` 对 `profile().genders` 裁站, 见 [task-system.md](task-system.md).
+- **能力声明**位于 `CrawlerProfile`: 演员爬虫必须给出 `capabilities` 与 `genders`; 影片爬虫空 `capabilities` 视为 `film_metadata`, 仅提供部分字段的来源用 `provided_fields` 裁剪抓取图. 消费 `FetchOptions.language` 的来源设置 `multi_language=True`; Stash 指纹匹配站设置 `uses_file_hash=True`. `site_roles` 从注册表推导配置 schema 与多语言站点; Handler 按 `Actor.gender` 裁剪演员来源, 见 [task-system.md](task-system.md).
 
 ## 影片出演者
 
@@ -35,7 +35,7 @@ CrawlerFactory (缓存实例)
 
 ## FC2 契约
 
-`crawlers/models.py::SearchQuery` 规范化 FC2 查询; 裸数字必须显式声明 FC2, 既有数据库身份不批量改写. `config/manager.py::ScrapingConfig._migrate_fc2ppvdb` 迁移旧来源 ID; `net/http.py::WebClient` 拒绝旧 host 及重定向目标. FC2 聚合补空与标签并集合并见 `aggregate/engine.py::_enrich_fc2`, 仍遵守字段优先级与黑名单. 官方原始标题保留于来源 raw, 不新增数据库字段.
+`crawlers/models.py::SearchQuery` 规范化 FC2 查询; 裸数字必须显式声明 FC2, 既有数据库身份不批量改写. `config/manager.py::ScrapingConfig._migrate_fc2ppvdb` 迁移旧来源 ID; `net/http.py::WebClient` 拒绝旧 host 及重定向目标. FC2 标量按配置链补空; 图片、剧照和预告片由 `media/artwork.py::rescue_artwork` 延迟获取, 只补缺失资源并保留来源 raw. 图片候选继续经共享 WebClient、host 限速与 ResourceStore 校验; 受限响应不得由来源自行绕过.
 
 ## 番号入参
 

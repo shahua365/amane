@@ -1,5 +1,13 @@
 # 维护交接
 
+更新时间: 2026-09-18
+
+当前工作分支 `codex/source-session-resilience` 已完成 FC2 字段级多源回退实现与隔离 NAS 验收。实现保留现有 FC2CMADB、FD2PPV、cookie、共享 WebClient 和 host RateLimiters，新增 PPVDataBank、FC2DB、Fourhoi、Paipancon 独立来源；Aggregator 只访问仍有字段缺口的来源，低优先级结果不覆盖已有值，图片失败不使 metadata scrape 失败。详细架构、四源实际观测、HTTP 状态、测试边界和改造前后命中率见 [FC2 字段级多源回退验收](reports/fc2-field-fallback-20260918.md)。
+
+生产 `Amane` 未替换、未重启，未删除或移动影片；隔离候选使用临时数据库且未挂载生产数据或媒体目录。2026-09-18 验收后生产健康接口仍为 HTTP 200。
+
+---
+
 更新时间: 2026-09-17
 
 ## 当前版本

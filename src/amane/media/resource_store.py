@@ -123,7 +123,7 @@ class ResourceStore:
         except OSError, ValueError, SyntaxError, Image.DecompressionBombError:
             return None
 
-    async def acquire_image(self, url: str, client: WebClient) -> Path | None:
+    async def acquire_image(self, url: str, client: WebClient, *, source_id: str | None = None) -> Path | None:
         """仅接受可完整解码的图片; 临时文件校验后原子写入 Resource."""
         async with self._image_locks.setdefault(url, asyncio.Lock()):
             cached = await self.resolve(url)
@@ -138,7 +138,12 @@ class ResourceStore:
                 return None
             tmp = self._base_dir / f"{uuid4().hex}.tmp"
             try:
-                if not await client.download_image(url, tmp):
+                downloaded = (
+                    await client.download_image(url, tmp, source_id=source_id)
+                    if source_id is not None
+                    else await client.download_image(url, tmp)
+                )
+                if not downloaded:
                     return None
                 mime = await asyncio.to_thread(self._image_mime, tmp)
                 if mime is None:
@@ -166,7 +171,9 @@ class ResourceStore:
         cached = await self.resolve(url)
         return cached if cached and await asyncio.to_thread(self._image_mime, cached) else None
 
-    async def acquire_first_image(self, urls: list[str], client: WebClient) -> AcquireResult:
+    async def acquire_first_image(
+        self, urls: list[str], client: WebClient, *, source_id: str | None = None
+    ) -> AcquireResult:
         candidates = list(dict.fromkeys(urls))
         # 全部本地候选优先于任意远端候选, 包含派生和手工导入图片.
         for url in candidates:
@@ -175,7 +182,7 @@ class ResourceStore:
                 return AcquireResult(success=True, path=cached, used_url=url, failed=[])
         failed: list[str] = []
         for url in candidates:
-            path = await self.acquire_image(url, client)
+            path = await self.acquire_image(url, client, source_id=source_id)
             if path:
                 return AcquireResult(success=True, path=path, used_url=url, failed=failed)
             failed.append(url)
@@ -397,7 +404,10 @@ class ResourceStore:
         for site in priority:
             if site not in urls_by_site:
                 continue
-            results = await asyncio.gather(*[self.acquire(u, client) for u in dict.fromkeys(urls_by_site[site])])
+            source_id = site.split(":", 1)[0]
+            results = await asyncio.gather(
+                *[self.acquire_image(u, client, source_id=source_id) for u in dict.fromkeys(urls_by_site[site])]
+            )
             paths = [p for p in results if p is not None]
             if paths:
                 return paths

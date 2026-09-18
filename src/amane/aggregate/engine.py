@@ -64,6 +64,7 @@ type Wave = dict[str, set[Language]]
 type SourceName = str | SiteName
 type FieldPriority = Mapping[MetadataField, Sequence[SourceName]]
 type FieldLanguage = Mapping[MetadataField, Language]
+type SourceFields = Mapping[str, frozenset[MetadataField]]
 type SourceKey = str
 
 
@@ -119,13 +120,31 @@ async def aggregate(
     multi_lang_sites: frozenset[SourceName] = MULTI_LANGUAGE_SOURCE_IDS,
     *,
     defer_artwork: bool = False,
+    source_fields: SourceFields | None = None,
+    fallback_on_empty: frozenset[MetadataField] = REQUIRED_SCALAR_FIELDS,
 ) -> AggregateResult:
     fl = field_language or {}
     snapshots = cache or {}
 
-    graph = build_graph(field_priority, fl, multi_lang_sites=multi_lang_sites)
+    effective_priority: dict[MetadataField, list[SourceName]] = {
+        field: [
+            source
+            for source in field_priority[field]
+            if source_fields is None or str(source) not in source_fields or field in source_fields[str(source)]
+        ]
+        for field in ALL_FIELDS
+    }
+    graph = build_graph(effective_priority, fl, multi_lang_sites=multi_lang_sites)
     current().debug("fetch graph built", graph=str(graph))
-    state = await execute_graph(graph, crawlers, query, snapshots, on_progress=on_progress, defer_artwork=defer_artwork)
+    state = await execute_graph(
+        graph,
+        crawlers,
+        query,
+        snapshots,
+        on_progress=on_progress,
+        defer_artwork=defer_artwork,
+        fallback_on_empty=fallback_on_empty,
+    )
 
     if not state.fetched:
         current().warning("no data fetched from any source")
@@ -178,6 +197,7 @@ async def execute_graph(
     on_progress: ProgressCallback | None = None,
     *,
     defer_artwork: bool = False,
+    fallback_on_empty: frozenset[MetadataField] = REQUIRED_SCALAR_FIELDS,
 ) -> ExecutionState:
     """按波次请求; 标量沿 fallback 当场短路. URL / 评分 / 剧照在全部请求结束后按字段链拼接."""
     snapshots = db_cache or {}
@@ -187,7 +207,15 @@ async def execute_graph(
     # 标量满足后移除; 聚合类字段始终保留.
     unsatisfied: set[MetadataField] = set(ALL_FIELDS)
     if defer_artwork:
-        unsatisfied.difference_update({MetadataField.POSTER_URLS, MetadataField.THUMB_URLS})
+        unsatisfied.difference_update(
+            {
+                MetadataField.POSTER_URLS,
+                MetadataField.THUMB_URLS,
+                MetadataField.TRAILER_URLS,
+                MetadataField.EXTRAFANART,
+                MetadataField.SCORE,
+            }
+        )
 
     # 禁用插件 / 未安装来源 / 构造失败不在 crawlers 中: 标成已处理空结果,
     # 不写入 failed / sites_queried, 也不调用 invoke_source (否则 KeyError → unexpected).
@@ -195,8 +223,10 @@ async def execute_graph(
         if node.site not in crawlers:
             state.fetched[node.cache_key] = None
 
-    for wave_idx, wave in enumerate(graph.waves):
-        # 本波仍有待处理字段的节点.
+    fetch_round = 0
+    while True:
+        # 每轮重新计算各字段的首个未处理节点. 同一来源可能因另一字段的短链被放进较早静态波次;
+        # 当时未激活的节点仍必须能在前驱失败后进入后续轮次.
         active: set[SourceKey] = set()
         for field in list(unsatisfied):
             for node in graph.field_chains[field]:
@@ -214,19 +244,19 @@ async def execute_graph(
                     _fill_scalar(state.result, field, data, ck)
                     unsatisfied.discard(field)
                     break
-                if field not in REQUIRED_SCALAR_FIELDS:
+                if field not in fallback_on_empty:
                     # 可选字段: 爬虫成功但值为空 → 接受空值, 不再 fallback.
                     _fill_scalar(state.result, field, data, ck)
                     unsatisfied.discard(field)
                     break
                 # 必填字段空值不接受, 继续沿链回退.
 
-        active_nodes = [n for n in wave if n.cache_key in active]
+        active_nodes = [node for node in graph.nodes if node.cache_key in active]
         if not active_nodes:
-            continue
+            break
 
         # 注入已合并的中间结果, 供后续波次爬虫使用.
-        partial = copy.copy(state.result) if wave_idx > 0 else None
+        partial = copy.copy(state.result) if fetch_round > 0 else None
 
         # 并行抓取.
         results = await asyncio.gather(
@@ -241,11 +271,12 @@ async def execute_graph(
                 state.failed.append(ck)
 
         # 标量沿链当场定值, 供短路与后波 partial 使用.
-        _collect_scalars_after_wave(graph, state, unsatisfied)
+        _collect_scalars_after_wave(graph, state, unsatisfied, fallback_on_empty)
 
         if on_progress is not None:
             sites = ", ".join(n.cache_key for n in active_nodes)
             await on_progress(_scalar_progress(unsatisfied), field_total, sites)
+        fetch_round += 1
 
     _assemble_aggregate_fields(graph, state)
     if query.number.startswith("FC2-PPV-"):
@@ -472,6 +503,10 @@ def _sanitize_aggregated_lists(meta: AggregatedMetadata) -> None:
     meta.actors = _dedupe_film_actors(meta.actors)
     meta.tags = _dedupe_names(meta.tags)
     meta.directors = _dedupe_names(meta.directors)
+    meta.poster_urls = list(dict.fromkeys(meta.poster_urls))
+    meta.thumb_urls = list(dict.fromkeys(meta.thumb_urls))
+    meta.trailer_urls = list(dict.fromkeys(meta.trailer_urls))
+    meta.extrafanart_urls = {site: list(dict.fromkeys(urls)) for site, urls in meta.extrafanart_urls.items()}
 
 
 def _fill_scalar(
@@ -489,7 +524,12 @@ def _fill_scalar(
     result.field_sources[field] = source_key
 
 
-def _collect_scalars_after_wave(graph: FetchGraph, state: ExecutionState, unsatisfied: set[MetadataField]) -> None:
+def _collect_scalars_after_wave(
+    graph: FetchGraph,
+    state: ExecutionState,
+    unsatisfied: set[MetadataField],
+    fallback_on_empty: frozenset[MetadataField],
+) -> None:
     """沿字段链定值标量. 尚未请求的节点中断该字段, 不取后面已返回的站."""
     for field in SCALAR_FIELDS:
         if field not in unsatisfied:
@@ -506,7 +546,7 @@ def _collect_scalars_after_wave(graph: FetchGraph, state: ExecutionState, unsati
                 _fill_scalar(state.result, field, data, ck)
                 unsatisfied.discard(field)
                 break
-            if field not in REQUIRED_SCALAR_FIELDS:
+            if field not in fallback_on_empty:
                 _fill_scalar(state.result, field, data, ck)
                 unsatisfied.discard(field)
                 break
@@ -524,7 +564,7 @@ def _assemble_aggregate_fields(graph: FetchGraph, state: ExecutionState) -> None
             if not value:
                 continue
             items = [value] if isinstance(value, str) else value
-            urls.extend(v for v in items if v)
+            urls.extend(v for v in items if v and v not in urls)
         setattr(state.result, dst, urls)
 
     extrafanart: dict[str, list[str]] = {}
@@ -532,7 +572,7 @@ def _assemble_aggregate_fields(graph: FetchGraph, state: ExecutionState) -> None
         ck = node.cache_key
         data = state.fetched.get(ck)
         if data is not None and data.extrafanart:
-            extrafanart[ck] = data.extrafanart
+            extrafanart[ck] = list(dict.fromkeys(data.extrafanart))
     state.result.extrafanart_urls = extrafanart
 
     scores: list[SourcedScore] = []

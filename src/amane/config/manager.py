@@ -69,11 +69,15 @@ _DEFAULT_CONTENT_ROUTES: dict[ContentType, list[SiteName]] = {
         SiteName.FREEJAVBT,
     ],
     ContentType.FC2: [
+        SiteName.FC2CMADB,
+        SiteName.FD2PPV,
+        SiteName.PPVDATABANK,
+        SiteName.FC2DB,
+        SiteName.FOURHOI,
+        SiteName.PAIPANCON,
         SiteName.FC2,
         SiteName.JAVARCHIVE,
         SiteName.JAVDB,
-        SiteName.FC2CMADB,
-        SiteName.FD2PPV,
         SiteName.FREEJAVBT,
     ],
     ContentType.CHINESE: [
@@ -295,7 +299,22 @@ class ScrapingConfig(BaseModel):
     """该类型实际请求的站点 ⊆ 此表; field_priority 只在表内重排."""
 
     field_priority: dict[MetadataField, list[str]] = Field(
-        default_factory=dict,
+        default_factory=lambda: {
+            **{
+                field: ["fc2cmadb", "fd2ppv", "ppvdatabank", "fc2db"]
+                for field in (
+                    MetadataField.TITLE,
+                    MetadataField.ACTORS,
+                    MetadataField.RELEASE,
+                    MetadataField.RUNTIME,
+                    MetadataField.STUDIO,
+                    MetadataField.PUBLISHER,
+                )
+            },
+            MetadataField.POSTER_URLS: ["fc2cmadb", "ppvdatabank", "fc2db", "fourhoi", "paipancon"],
+            MetadataField.THUMB_URLS: ["fc2cmadb", "ppvdatabank", "fc2db", "fourhoi", "paipancon"],
+            MetadataField.EXTRAFANART: ["fd2ppv", "ppvdatabank", "paipancon"],
+        },
         json_schema_extra=kv(
             {
                 "v-default": [],

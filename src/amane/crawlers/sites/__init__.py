@@ -6,7 +6,9 @@ from .faleno import FalenoCrawler
 from .fc2 import FC2Crawler
 from .fc2club import FC2ClubCrawler
 from .fc2cmadb import FC2CMADBCrawler
+from .fc2db import FC2DBCrawler
 from .fd2ppv import FD2PPVCrawler
+from .fourhoi import FourhoiCrawler
 from .freejavbt import FreejavbtCrawler
 from .getchu import GetchuCrawler
 from .giga import GigaCrawler
@@ -19,6 +21,8 @@ from .javlibrary import JavLibraryCrawler
 from .kin8 import Kin8Crawler
 from .mgstage import MGStageCrawler
 from .official import OfficialCrawler
+from .paipancon import PaipanconCrawler
+from .ppvdatabank import PPVDataBankCrawler
 from .prestige import PrestigeCrawler
 from .r18dev import R18DevCrawler
 from .theporndb import ThePornDBCrawler
@@ -32,8 +36,10 @@ __all__ = [
     "FC2CMADBCrawler",
     "FC2ClubCrawler",
     "FC2Crawler",
+    "FC2DBCrawler",
     "FD2PPVCrawler",
     "FalenoCrawler",
+    "FourhoiCrawler",
     "FreejavbtCrawler",
     "GetchuCrawler",
     "GigaCrawler",
@@ -46,6 +52,8 @@ __all__ = [
     "Kin8Crawler",
     "MGStageCrawler",
     "OfficialCrawler",
+    "PPVDataBankCrawler",
+    "PaipanconCrawler",
     "PrestigeCrawler",
     "R18DevCrawler",
     "ThePornDBCrawler",
