@@ -2,6 +2,12 @@
 
 更新时间: 2026-09-18
 
+当前生产 FC2 cohort 验证状态为 `PARTIAL`。既有 15 个 cohort 任务均已完成且未重复提交；FC2CMADB 为 10 个 ok / 5 个 not_found，FD2PPV 为 15/15 cooldown，FC2DB 为 15/15 age_verification。poster/thumb/extrafanart 前后完整度、最终字段及图片 provenance、ResourceStore 新增记录与缓存文件存在性仍为 `UNVERIFIED`，因此不能把 locator 或 crawler 成功记录当作图片落盘证据，也不能据此确定最终来源优先级。
+
+用户已授权恢复 library 1/2 的 `automation=scrape` 与 schedule 1/2 的 `enabled=true`，但当前执行环境无法建立生产执行链路，生产认证读取也被自动安全审查拒绝。由于没有取得修改后的 API/配置回读，这四项配置状态保持 `BLOCKED / UNVERIFIED`。继续工作时先恢复只读/认证执行链路并完成配置回读，再补齐图片完整度、provenance 与 ResourceStore 证据；禁止重新提交该 cohort。详见 [FC2 生产 cohort 验证](reports/fc2-production-cohort-20260918.md)。
+
+---
+
 当前工作分支 `codex/source-session-resilience` 已完成 FC2 字段级多源回退实现，并完成生产灰度验收。生产镜像基于 `7ddfc8a53840f4e39d5c1029a4b39638a6b14e09` 构建；Amane 健康、worker、数据库、媒体库 API 和 ResourceStore 写入均正常，媒体文件未发生变化。两个历史缺图样本由 PPVDataBank 补充字段并完成任务，但用户指定的 `3193265`、`4974556`、`4601311` 不在当前生产数据库中，因此总体状态为 `PARTIAL`，不能标记为 `PRODUCTION VERIFIED`。
 
 生产报告见 [FC2 字段级多源回退生产灰度验收](reports/fc2-field-fallback-production-20260918.md)；隔离候选与来源审计见 [FC2 字段级多源回退验收](reports/fc2-field-fallback-20260918.md)。FC2DB 年龄确认、Fourhoi 403、Paipancon miss 和 actor 缺失保持为后续独立事项。

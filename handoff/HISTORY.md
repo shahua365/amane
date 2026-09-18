@@ -1,5 +1,13 @@
 # 重要维护记录
 
+## 2026-09-18 — FC2 生产 cohort 验证
+
+- 只检查既有 15 个 SCRAPE cohort 任务；全部完成，没有重新提交。
+- FC2CMADB 为 10 个 ok / 5 个 not_found; FD2PPV 为 15/15 cooldown; FC2DB 为 15/15 age_verification。其它来源仅记录取得证据的样本，不推断完整 cohort 结果。
+- poster/thumb/extrafanart 前后完整度、字段及图片 provenance、ResourceStore 新增记录与缓存文件存在性尚未取得足够生产证据，保持 `UNVERIFIED`。
+- library 1/2 自动化与 schedule 1/2 启用状态需要修改后回读；当前生产执行链路被运行环境阻塞，保持 `BLOCKED / UNVERIFIED`。
+- 没有重新部署、修改代码、重新提交 SCRAPE、执行全库 RESCRAPE/ORGANIZE、创建 metadata、移动或删除媒体、绕过 Cloudflare/年龄验证、修改站点认证或限速配置。
+
 ## 2026-09-14 — 建立个人 Fork 维护基础
 
 - 创建 `shahua365/amane` Fork, 配置 `origin` 与官方 `upstream`
